@@ -1,0 +1,3395 @@
+<!DOCTYPE html>
+<html>
+<title>Complex Function Graph Viewer</title>
+<meta charset='utf-8'>
+<!-- by David Bau, durring snowstorm Nemo 2013 -->
+<!-- a tool for visualizing complex functions, -->
+<!-- a demonstration of canvas and web workers -->
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- STYLESHEET        - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<style>
+body { padding:0; margin: 0; background: black; }
+div.fullpage { display:table; width: 100%; height:100%; }
+div.fullpage > div.workspace { display: table-cell; }
+canvas { position: absolute; }
+img { display: none; }
+#editcontrol {
+  display:inline-block;
+  width: 48%;
+}
+input.button {
+  width:100%;
+  height: 48px;
+  line-height: 44px;
+  padding: 0;
+  vertical-align: middle;
+  cursor: text;
+}
+#timecontrol {
+  position: relative;
+  display: none;
+  table-layout: fixed;
+  width:48%;
+  vertical-align: middle;
+  cursor: pointer;
+  color: white;
+  text-shadow: 1px 1px 5px #000;
+  font:12pt Arial;
+  font-weight:bold;
+  text-align:center;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+#timecontrol .layout {
+  display: table-cell;
+  vertical-align: top;
+  width: 48px;
+}
+#timeline.layout {
+  width: 99%;
+  padding: 30px 12px 0 12px;
+}
+#thinline {
+  height: 1px;
+  background-color: #bbb;
+  top: 10px;
+}
+#slider {
+  width: 128px;
+  margin-left: -65px;
+}
+#timecontrol .triangle {
+  display: inline-block;
+  width:0;
+  height:0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid #bbb;
+  margin-bottom: 6px;
+}
+#timeline:hover .triangle {
+  border-bottom: 10px solid white;
+}
+#timecontrol .clicker {
+  text-align:center;
+  height:18px;
+  width:32px;
+  padding:16px 8px;
+  color: #bbb;
+  border-radius:10px;
+  bottom:0;
+}
+#timecontrol .clicker:hover {
+  color: white;
+  font-weight:bold;
+  background: rgba(0,0,0,.5);
+}
+.button {
+  font:18pt Arial;
+  font-weight:bold;
+  text-align:center;
+  padding:8px 24px;border-radius:10px;
+  color:white;background:rgba(0,0,0,.5);
+  transition:border-color 0.4s;
+  -webkit-transition:border-color 0.4s;
+  -moz-transition:border-color 0.4s;
+  -o-transition:border-color 0.4s;
+  border:3px solid transparent;
+  cursor: pointer;
+}
+.button:hover, .button:focus {
+  border-color: white;
+}
+div.allgroup {
+  position:absolute;
+  bottom:0;
+  width: 100%;
+  height: 148px;
+}
+.group {
+  position:absolute;
+  display: inline-block;
+  bottom:0;
+  padding: 20px;
+  vertical-align:bottom;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+.centergroup {
+  position: absolute;
+  display: inline-block;
+  bottom: 0;
+  padding: 0 0 20px 0;
+  vertical-align:bottom;
+  width: 100%;
+  text-align: center;
+}
+.loading {
+  background:url(data:image/gif;base64,R0lGODlhKwALAPEAAAAAAP8AAHwAAP8AACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAKwALAAACMoSOCMuW2diD88UKG95W88uF4DaGWFmhZid93pq+pwxnLUnXh8ou+sSz+T64oCAyTBUAACH5BAkKAAAALAAAAAArAAsAAAI9xI4IyyAPYWOxmoTHrHzzmGHe94xkmJifyqFKQ0pwLLgHa82xrekkDrIBZRQab1jyfY7KTtPimixiUsevAAAh+QQJCgAAACwAAAAAKwALAAACPYSOCMswD2FjqZpqW9xv4g8KE7d54XmMpNSgqLoOpgvC60xjNonnyc7p+VKamKw1zDCMR8rp8pksYlKorgAAIfkECQoAAAAsAAAAACsACwAAAkCEjgjLltnYmJS6Bxt+sfq5ZUyoNJ9HHlEqdCfFrqn7DrE2m7Wdj/2y45FkQ13t5itKdshFExC8YCLOEBX6AhQAADsAAAAAAAAAAAA=);
+  background-position: 95% center;
+  background-repeat: no-repeat;
+}
+#about {
+  top:0; left: 0;
+  width: 35%;
+  height: 42%;
+  z-index: 1;
+}
+#about .box {
+  background:rgba(0,0,0,.5);
+  padding: 12px;
+  border-radius:10px;
+  color:white;
+  width: 100%;
+  height: 100%;
+}
+#about .scroller {
+  height: 100%;
+  overflow-y: auto;
+  font:10pt Arial;
+}
+#about ::-webkit-scrollbar {
+  width: 12px;
+}
+#about ::-webkit-scrollbar-track-piece {
+  background: rgba(0, 0, 0, 0.4);
+}
+#about ::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: rgba(88,88,88,0.7);
+}
+#about h2:nth-of-type(1) {
+  margin-top: 0;
+}
+#about p {
+  margin: 0 0 8px 0;
+  line-height: 18px;
+}
+#about a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 12pt;
+  white-space: nowrap;
+}
+#about a:hover {
+  color: skyblue;
+  text-decoration: underline;
+}
+.quiet {
+  opacity: 0;
+  transition:border-color,opacity 0.2s;
+  -webkit-transition:border-color,opacity 0.2s;
+  -moz-transition:border-color,opacity 0.2s;
+  -o-transition:border-color,opacity 0.2s;
+}
+#about.quiet:hover {
+  opacity: 1;
+}
+div.allgroup:hover .quiet {
+  opacity: 1;
+}
+</style>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- HELP TEXT         - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div id="about" class="quiet group"><div class="box"><div class="scroller">
+<h2>Complex Function Viewer</h2>
+<p>This tool visualizes any complex-valued
+  function as a conformal map by assigning a color to each point in
+  the complex plane according to the function's value at that point.</p>
+<p>Enter any expression in z.</p>
+<p>The identity function <a href="#z">z</a> shows how colors are assigned:
+  a gray ring at <a href="#z disk(16(|z|-1))">|z| = 1</a> and a black and
+  white circle around any <a href="#z disk(16|z|)">zero</a>
+  and colored circles around <a href="#z disk(16|z-1|)">1<a>,
+  <a href="#z disk(16|z-i|)">i</a>, <a href="#z disk(16|z+1|)">-1</a>,
+  and <a href="#z disk(16|z+i|)">-i</a>.
+  Checkers cover the plane in a 1/16th
+  <a href="#z disk(1/(16(|z|-1))) disk(1/(16|z|))">unit grid</a>.
+  Colors are turquoise in the
+  <a href="#z disk(|z-1.5|)">positive</a> direction,
+  red in the <a href="#z disk(|z+1.5|)">negative</a>, gold-green
+  towards <a href="#z disk(|z-1.5i|)">+i</a>, purplish
+  towards <a href="#z disk(|z+1.5i|)">-i</a>,
+  and darker towards <a href="#z disk(3/|z|)">infinity</a>.
+  There is also a colored circle towards infinity at
+  <a href="#8z disk(2/|z|)">|z| &gt; 16</a>
+  that can be seen at any pole towards infinity such as
+  in <a href="#1/z">1/z</a>.
+ <p>Here are some example functions to try:</p>
+ <p style="text-align:center;">
+   <a href="#z^2">z^2</a><br>
+   <a href="#zz*">zz*</a><br>
+   <a href="#(z+1)/(z-1)">(z+1)/(z-1)</a><br>
+   <a href="#sin(z)">sin(z)</a><br>
+   <a href="#e^z">e^z</a><br>
+   <a href="#log(z)">log(z)</a><br>
+   <a href="#sech(z)">sech(z)</a><br>
+   <a href="#arctan(z)">arctan(z)</a><br>
+   <a href="#z^3-1">z^3-1</a><br>
+   <a href="#0.926(z+7.3857e-2 z^5+4.5458e-3 z^9)"
+     >0.926(z<wbr>+7.3857e-2 z^5<wbr>+4.5458e-3 z^9)</a><br>
+   Jacobi elliptic <a href="#sn(z,0.3)">sn(z, 0.3)</a><br>
+   Gamma function <a href="#gamma(z)">gamma(z)</a><br>
+   Iterated function <a href="#iter(z+z'^2,z,12)">iter(z+z'^2,z,12)</a>
+  </p>
+<h2>Conformal Maps on the Globe</h2>
+<p>Conformal maps have their history in 18th century mapmaking,
+  when new mathematical developments allowed mapmakers to understand
+  how to precisely eliminate local shape distortions in maps.
+  Click the <a href="#m&b=earth">&#x2295;</a> button in the lower
+  right corner to switch to a conformal mapping of the surface
+  of the earth.  Conformal maps preserve local angles everywhere,
+   although they may distort sizes to do so.
+<p>The Mercator projection is an example.  Try:</p>
+<p align=center><a href="#e^iz&b=earth">e^iz</a></p>
+<p>The azimuthal stereographic projection is a beautiful ancient technique
+that is also conformal, but it is usually broken into two hemispheres:</p>
+<p align=center><a href=
+  "#disk(z+1)i(z+1-i)/(z+1+i)-disk(z-1)i(z-1-i)/(z-1+i)&b=earth&z=3"
+  >...i(z+1-i)/(z+1+i)...</a>
+<p>Lagrange advocated another conformal projection that squeezes the
+entire globe into a single circle:</p>
+<p align=center><a href="#(disk(z)(z-i)/(z+i))^2&b=earth&z=2.5"
+  >(disk(z)(z-i)<wbr>/(z+i))^2</a></p>
+<p>Read more about conformal projections in cartography on
+Carlos A. Furuti's nicely illustrated
+<a href="http://www.progonos.com/furuti/MapProj/Normal/ProjConf/projConf.html"
+>mapmaking <wbr>website</a>.
+Or Donald Fenna's mathematical mapmaking book,
+<a href="http://books.google.com/books?id=8LZeu8RxOIsC"
+  >Cartographic <wbr>Science</a>.</p>
+<h2>Animating Conformal Maps</h2>
+<p>To visualize the relationships within families of complex functions,
+parameterize them with the variables t, u, s, r, or n.  The tool will render
+a range of complex functions for values of the parameter, adjustable with
+a slider or shown in an aimation.  The parameter t will vary linearly
+from 0 to 1; u will circle through complex units; s follows a sine wave
+between -1 and 1; r follows a sine wave from 0 to 1 and back; and
+n counts integers from 1 to 60.</p>
+<p>For example, to see the relationship between <a href="#z^3">z^3</a> and
+<a href="#z^3+1">z^3+1</a>, simply view:</p>
+<p style=text-align:center;><a href="#z^3+t&a=play">z^3+t</a></p>
+<p>On the globe, multiplying by powers of unity will rotate the world on its
+axis:</p>
+<p style=text-align:center;><a href="#u(z-i)/(z+i)&a=repeat&b=earth"
+  >u(z-i)/(z+i)</a></p>
+<p>Because more than 300 frames are computed, parameterized expressions can
+take a long time to fully render.  A rough, blurry sketch is drawn quickly,
+and finer-grained rendering will follow for several minutes.  When done,
+the frames will be antialiased and animated at 24 fps.</p>
+<p>Simple families of rational function produce mesmerizing animations:
+<p style="text-align:center;">
+<a href="#z^2+s&a=repeat">z^2+s</a><br>
+<a href="#z^3+1+u&a=repeat">z^3+1+u</a><br>
+<a href="#z^5+uz+1&a=repeat">z^5+uz+1</a><br>
+<a href="#z^2/(r+z)&a=repeat">z^2/(r+z)</a><br>
+</p>
+<p>Iterated functions and sums can also be animated.  For example, the
+following are well-known Taylor series for
+<a href="#e^z">e^z</a>,
+<a href="#sin(z)">sin(z)</a>,
+<a href="#1/(1-z)">1/(1-z)</a>, and
+<a href="#log(1-z)">log(1-z)</a>:
+
+<p style="text-align:center;">
+<a href="#sum(z^n/n!)&z=36&a=play">sum(z^n/n!)</a><br>
+<a href="#sum((-1)^n/(2n+1)! z^(2n+1))&z=36&a=play"
+>sum((-1)^n/(2n+1)! z^(2n+1))</a><br>
+<a href="#sum(z^n)&a=play">sum(z^n)</a><br>
+<a href="#sum(z^(n+1)/(n+1))&a=play">sum(z^(n+1)/(n+1))</a><br>
+</p>
+<p>The radii of convergence can clearly be seen
+in the last two examples</p>
+
+<address style="padding:16px;">tool by
+  <a href="http://davidbau.com/archives/2013/02/10/conformal_map_viewer.html"
+    >David Bau</a></address>
+</div></div></div>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- UI CONTROLS       - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div class="fullpage">
+<div class="workspace">
+<canvas id="c"></canvas>
+<div class="allgroup">
+  <div class="centergroup">
+<div id="timecontrol">
+<div class="layout"><div id="play" class="quiet clicker">&#x21e5;</div></div>
+<div id="timeline" class="layout">
+  <div id="thinline" class="quiet"></div>
+  <div id="slider">
+    <div class="triangle quiet"></div>
+    <div id="time" class="label">&nbsp;</div>
+  </div><!--slider-->
+</div><!--timeline-->
+<div class="layout"><div id="repeat" class="quiet clicker">&#x21bb;</div></div>
+</div><!--timecontrol-->
+<br>
+<div id="editcontrol" class="loading">
+  <input id="expr" class="button" style="text-align:center;" size=25>
+</div>
+</div><!--centergroup-->
+<div class="quiet group" style="left:0;">
+  <div id="zoomin" class="button" title="zoom in">+</div>
+  <div id="zoomout" class="button" title="zoom out">-</div>
+</div><!--group left-->
+<div class="quiet group" style="right:0;">
+  <div id="earth" class="button" title="change map">&#x2295;</div>
+  <div id="fullscreen" class="button" title="full screen">&#x21d5;</div>
+</div><!--group right-->
+</div><!--allgroup-->
+</div><!--workspace-->
+</div><!--fullpage-->
+
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- UI SCRIPT         - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<script>
+
+function init() {
+  // Here is the UI.
+  var default_expr = 'z';
+  var default_extent = 4.5;
+  var t_quanta = 360;
+  var animation_fps = 24;
+  var change_delay = 300;
+  var sethash_delay = 3000;
+  var sethash_timer = null;
+  var blit_blocksize = 128;
+  var use_animation_frames = true;
+  var use_threads = true;
+  var in_memory_frames = (1 + t_quanta) * 2 + 100;
+  var use_temp_filesystem = 20 * 1024 * 1024 * 1024;
+  var min_filesystem_space = 1 * 1024 * 1024 * 1024;
+  var cache_version = 1;
+  var min_elapsed_to_cache = 10 * 1000;
+  var checkpoint_interval = 5 * 60 * 1000;
+  var current_worker = null;
+  var worker_script_url = null;
+  var cache_system = null;
+  var redraw_failure_retries = 3;
+  var redraw_failures = 0;
+  var bitmap_load_failure_retries = 3;
+  var bitmap_load_failures = 0;
+  var start_animation_failure_retires = 3;
+  var start_animation_retries = 0;
+  var reading_input = null;
+  var maincanvas = ebi('c');
+  var mainctx = maincanvas.getContext('2d');
+  var loaded_bitmaps = {};
+  var drawn = { };
+  var requested = {
+    fn: function(z) { return {r:0,i:0}; },
+    expr: '',
+    canon: '',
+    extent: default_extent,
+    width: 0,
+    height: 0,
+    parameterized: false,
+    animode: null,
+    mode: null
+  };
+  var timelineui = {
+    mousepos: 0,
+    animode: null,
+    accepting: false,
+    frame: 0,
+    interval: Math.floor(1000/animation_fps),
+    starttime: 0,
+    cancelTimer: (function() {
+      if (this.timer) { window.clearTimeout(this.timer); }
+      if (this.aframe) { window.cancelAnimationFrame(this.aframe); }
+      this.timer = null;
+      this.aframe = null;
+    }),
+    hasTimer: (function() {
+      return (this.timer !== null || this.aframe !== null);
+    }),
+    delayTimer: (function(cb, ms) {
+      this.cancelTimer();
+      var tui = this;
+      this.timer = window.setTimeout(
+          function() { tui.timer = null; cb(); }, ms);
+    }),
+    animationTimer: (function(cb, ms) {
+      this.cancelTimer();
+      var tui = this;
+      if (use_animation_frames && window.requestAnimationFrame) {
+        this.aframe = window.requestAnimationFrame(
+          function() { tui.aframe = null; cb(); });
+      } else {
+        this.timer = window.setTimeout(
+            function() { tui.timer = null; cb(); }, ms);
+      }
+    }),
+    timer: null,
+    aframe: null
+  };
+  var offscreen = {
+    frameshown: 0,
+    frames: null
+  };
+  function inspect() {
+    return { drawn: drawn, offscreen: offscreen };
+  }
+  window.debug_inspect = inspect;
+
+  function run() {
+    // Load web worker code if facilities are available.
+    if (use_threads && window.Worker && window.Blob
+        && window.URL && window.URL.createObjectURL) {
+      worker_script_url = window.URL.createObjectURL(new Blob(
+        [ebi('dispatch').textContent,
+         ebi('render').textContent,
+         ebi('compute').textContent],
+        {type: "text/javascript"}));
+    }
+    // Init caching system if facilities are availble.
+    cache_system = init_cache_system(
+        cache_version, in_memory_frames,
+        use_temp_filesystem, min_filesystem_space);
+
+    // Listen to various ui gesture events.
+    bind(window, 'resize', redraw);
+    bind(window, 'hashchange', readhash);
+    bind(ebi('expr'), 'keyup', setfunc);
+    bind(ebi('expr'), 'blur', revertfunc);
+    bind(ebi('zoomin'), 'click', zoomin);
+    bind(ebi('zoomout'), 'click', zoomout);
+    bind(ebi('timeline'), 'mousemove', movetime);
+    bind(ebi('timecontrol'), 'mouseout', movetimereset);
+    bind(ebi('timeline'), 'click', cancelplay);
+    bind(ebi('repeat'), 'click', toggleplay);
+    bind(ebi('play'), 'click', toggleplay);
+    bind(ebi('earth'), 'click', togglebitmap);
+    // Enable fullscreen button if supported.
+    if (!(document.fullscreenEnabled ||
+          document.mozFullscreenEnabled ||
+          document.webkitFullscreenEnabled)) {
+      bind(ebi('fullscreen'), 'click', opennewwindow);
+    } else {
+      bind(ebi('fullscreen'), 'click', togglefullscreen);
+    }
+    // Load initial state from hash, or start with a default.
+    if (/^#/.exec(window.location.hash)) {
+      readhash();
+    } else {
+      ebi('expr').value = default_expr;
+      setfunc(true);
+    }
+    // Done.
+  }
+  function ebi(id) {
+    return document.getElementById(id);
+  }
+  function leftposition(e) {
+    for (var left = 0; e; e = e.offsetParent) { left += e.offsetLeft; }
+    return left;
+  }
+  function trim(s) {
+    if (s.trim) { return s.trim(); }
+    return s.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+  }
+  function bind(elt, ev, fn) {
+    if (elt.addEventListener) {
+      elt.addEventListener(ev, fn, false);
+    } else if (elt.attachEvent) {
+      elt.attachEvent('on' + ev, fn);
+    }
+  }
+  function setfunc(donow, noredraw) {
+    if (reading_input) {
+      window.clearTimeout(reading_input);
+      reading_input = null;
+    }
+    if (donow) {
+      readinput();
+    } else {
+      reading_input = window.setTimeout(readinput, change_delay);
+    }
+    function readinput() {
+      reading_input = null;
+      var s = trim(ebi('expr').value);
+      if (s == requested.expr) return;
+      var parsed = complex_expression(s);
+      if (parsed !== null) {
+        var animate = parsed.parameters.length > 0;
+        requested.fn = parsed.fn;
+        requested.expr = s;
+        requested.canon = parsed.fntext;
+        requested.extent = default_extent;
+        requested.parameterized = animate;
+        requested.caption = animate ? parsed.parameters[0].caption : null;
+        ebi('timecontrol').style.display = animate ? 'inline-table' : 'none';
+        if (!animate) { cancelplay(); }
+        if (noredraw) { return; }
+        sethash();
+        redraw();
+      }
+    }
+  }
+  function zoomin() {
+    requested.extent /= 2;
+    sethash();
+    redraw();
+  }
+  function zoomout() {
+    requested.extent *= 2;
+    sethash();
+    redraw();
+  }
+  function movetimereset(ev) {
+    if (ev.relatedTarget === null ||
+      !ebi('timeline').contains(ev.relatedTarget)) {
+      timelineui.accepting = false;
+      if (!timelineui.animode) {
+        timelineui.cancelTimer();
+      }
+    }
+  }
+  function movetime(ev) {
+    if (!timelineui.animode) {
+      timelineui.mousepos = ev.pageX - leftposition(ebi('thinline'));
+      if (timelineui.accepting) {
+        movetimeexec();
+        return;
+      }
+      if (!timelineui.hasTimer()) {
+        timelineui.delayTimer(movetimeexec, change_delay);
+      }
+    }
+  }
+  function movetimeexec() {
+    var timelinewidth = ebi('thinline').offsetWidth,
+        scaled = timelineui.mousepos / timelinewidth,
+        framenum = Math.min(t_quanta,
+                   Math.max(0, Math.round(scaled * t_quanta)));
+    timelineui.accepting = true;
+    timelineui.frame = framenum;
+    shownearframe(framenum);
+  }
+  function movetimerefresh() {
+    // Called after animation frames have been cleared, to
+    // switch t to a frame that is included in the sample.
+    if (!timelineui.hasTimer()) {
+      timelineui.delayTimer(function() {
+        shownearframe(timelineui.frame);
+      }, change_delay * 2);
+    }
+  }
+  function cancelplay(ev) {
+    requested.animode = null;
+    stopanimation();
+    if (ev) { movetime(ev); }
+    sethash();
+  }
+  function toggleplay(ev) {
+    if (timelineui.animode) {
+      cancelplay();
+    } else {
+      stopanimation();
+      requested.animode = ev.target.id;
+      // if no frames, attempt to recompute and look again.
+      if (!offscreen.frames) {
+        redraw();
+        if (!offscreen.frames) {
+          requested.animode = null;
+        }
+      }
+      sethash();
+      if (requested.animode) {
+        startanimation()
+      }
+    }
+  }
+  function stopanimation() {
+    timelineui.cancelTimer();
+    timelineui.animode = null;
+    timelineui.timer = null;
+    syncbuffer();
+    movetimerefresh();
+  }
+  function startanimation() {
+    if (requested.animode === null) {
+      stopanimation();
+      return;
+    }
+    start_animation_failures = 0;
+    timelineui.cancelTimer();
+    timelineui.animode = requested.animode;
+    if (requested.animode != 'repeat') {
+      timelineui.starttime = (new Date).getTime();
+      showframe(0);
+      timelineui.frame = 0;
+    }
+    if (timelineui.frame + 1 >= offscreen.frames.length) {
+      showframe(0);
+      timelineui.frame = 0;
+    }
+    timelineui.animationTimer(play, timelineui.interval);
+    function play() {
+      if (!offscreen.frames) {
+        cancelplay();
+        return;
+      }
+      var newtime = (new Date).getTime(),
+          elapsed = newtime - timelineui.starttime,
+          elapsedframes = Math.floor(elapsed / timelineui.interval);
+      if (timelineui.animode == 'play' &&
+          elapsedframes >= offscreen.frames.length) {
+        timelineui.frame = offscreen.frames.length - 1;
+        shownearframe(timelineui.frame, true);
+        cancelplay();
+        return;
+      }
+      // Skip the first frame (same as the last) when looping animations.
+      timelineui.frame = (elapsedframes - 1)
+          % (offscreen.frames.length - 1) + 1;
+      shownearframe(timelineui.frame, true);
+      newtime = (new Date).getTime();
+      elapsed = newtime - timelineui.starttime;
+      timelineui.animationTimer(play, timelineui.interval -
+          (elapsed % timelineui.interval));
+    }
+  }
+  function shownearframe(framenum, animating) {
+    if (!offscreen.frames) { return; }
+    // Hunt for a frame that has been drawn rather than showing a blank frame.
+    for (var j = 0; j <= offscreen.frames.length; ++j) {
+      var k = animating ? -j : (1 - (j % 2) * 2) * (j + 1) >> 1;
+      var near = (framenum + offscreen.frames.length + k)
+                  % offscreen.frames.length;
+      if (offscreen.frames[near].filled) {
+        showframe(near);
+        return;
+      }
+    }
+    showframe(framenum);
+  }
+  function showframe(framenum, force) {
+    if (!offscreen.frames) { return; }
+    var timelinewidth = ebi('thinline').offsetWidth,
+        quantized = framenum / t_quanta,
+        pegged = Math.max(0, Math.min(1, quantized)),
+        pos = Math.round(pegged * timelinewidth),
+        caption = ebi('time'),
+        slider = ebi('slider');
+    slider.style.marginLeft = (pos - slider.offsetWidth / 2 - 1) + 'px';
+    caption.innerHTML = requested.caption ? requested.caption(pegged) : '';
+    if (framenum == offscreen.frameshown && !force) { return; }
+    paintframe(offscreen.frames[framenum]);
+    offscreen.frameshown = framenum;
+  }
+  function paintframe(frame) {
+    if (frame.same_as !== null && offscreen.frames !== null) {
+      frame = offscreen.frames[frame.same_as];
+    }
+    if (frame.canvas !== null) {
+      mainctx.drawImage(frame.canvas, 0, 0);
+    } else {
+      mainctx.save();
+      if (frame.constant_rgb !== null) {
+        mainctx.fillStyle = 'rgb(' + frame.constant_rgb.join(',') + ')';
+      }
+      mainctx.fillRect(0, 0, drawn.width, drawn.height);
+      mainctx.restore();
+    }
+  }
+  // Returns the 2d drawing context for the given frame.  If the given
+  // frame is also the one currently shown, then returns two contexts:
+  // one for the offscreen buffer, and one for the onscreen canvas.
+  function framectxes(framenum) {
+    if (!offscreen.frames) {
+      return [mainctx];
+    }
+    var frame = offscreen.frames[framenum];
+    if (frame.same_as !== null) { return []; }
+    if (frame.canvas === null) {
+      // Lazy creation of canvas
+      frame.canvas = document.createElement('canvas');
+      frame.canvas.width = drawn.width;
+      frame.canvas.height = drawn.height;
+      frame.ctx = frame.canvas.getContext('2d');
+    }
+    if (!timelineui.animode && (
+        offscreen.frameshown == framenum ||
+        offscreen.frames[offscreen.frameshown].same_as == framenum)) {
+      return [mainctx, frame.ctx];
+    }
+    return [frame.ctx];
+  }
+  // When animation timelineui.animode is flipped to false, the offscreen
+  // bitmap (if any) is synced with the main context, because it is allowed
+  // to get out of sync during offscreen.
+  function syncbuffer() {
+    if (!offscreen.frames) { return; }
+    showframe(offscreen.frameshown, true);
+  }
+  // Makes a copy of a canvas.
+  function clone_canvas(c) {
+    var newcanvas = document.createElement('canvas');
+    newcanvas.width = c.width;
+    newcanvas.height = c.height;
+    newcanvas.getContext('2d').drawImage(c, 0, 0);
+    window.cloned = newcanvas;
+    return newcanvas;
+  }
+  // Return an array of frames to cache.
+  function frames_to_cache() {
+    var caching_frames = offscreen.frames;
+    if (caching_frames === null) {
+      caching_frames = [{
+        canvas: clone_canvas(maincanvas),
+        drawn_pixels: maincanvas.width * maincanvas.height,
+        same_as: null,
+        constant_rgb: null,
+        filled: true
+      }];
+    }
+    return caching_frames;
+  }
+  function spawn_worker() {
+    try {
+      return new Worker(worker_script_url);
+    } catch (e) {
+      return null;
+    }
+  }
+  // The main redraw function.  When any UI state may have changed,
+  // redraw is called to possibly restart the rendering jobs.
+  function redraw() {
+    // verify that what is being drawn is different from the request.
+    if (maincanvas.width != window.innerWidth ||
+      maincanvas.height != window.innerHeight) {
+      requested.width = maincanvas.width = window.innerWidth;
+      requested.height = maincanvas.height = window.innerHeight;
+    }
+    if (drawn.width == requested.width &&
+        drawn.height == requested.height &&
+        drawn.canon == requested.canon &&
+        drawn.mode == requested.mode &&
+        drawn.extent == requested.extent) {
+      return;
+    }
+    // before drawing, require that the bitmap be loaded.
+    if (!isbitmaploaded(requested.mode)) {
+      loadbitmap(requested.mode, redraw);
+    }
+    // cache away the previous render if not yet saved.
+    if (cache_system !== null && !drawn.finished
+        && drawn.elapsed > min_elapsed_to_cache) {
+      var caching_drawn = drawn;
+      var caching_frames = frames_to_cache();
+      cache_system.save(caching_drawn, caching_frames);
+    }
+    // Try loading from cache.  This is done asynchronously, so if the
+    // loading is successful, it kills and replaces current render.
+    if (cache_system !== null) {
+      cache_system.load(requested, function(m) {
+        restart_render_from_cache(m.drawn, m.frames);
+      }, function(e) {
+        // Not in the cache - ordinary, so nothing to do.
+      });
+    }
+    // Notate that we are working on drawing this request.
+    var new_job = {
+      width: requested.width,
+      height: requested.height,
+      canon: requested.canon,
+      mode: requested.mode,
+      extent: requested.extent,
+      expr: requested.expr,
+      state: null,
+      info: null,
+      starttime: (new Date).getTime(),
+      elapsed: 0,
+      finished: false,
+    };
+    // Sometimes when loading out of the browser cache, the canvas fails
+    // to work 100% on pageload; so just catch the exception and retry.
+    try {
+      start_render(new_job, null);
+      redraw_failures = 0;
+    } catch (e) {
+      redraw_failures += 1;
+      trace('redraw failure #' + redraw_failures + ': ' + e.message);
+      if (redraw_failures <= redraw_failure_retries) {
+        window.setTimeout(redraw, change_delay);
+      }
+    }
+  }
+  // Callback when the cache load was successful.  This will
+  // kill the ongoing rendering job and replace with the new one
+  // if it is relevant.
+  function restart_render_from_cache(cached_job, cached_frames) {
+    // Only apply the cached data if it is relevant and helpful.
+    if (!(drawn.width == cached_job.width &&
+        drawn.height == cached_job.height &&
+        drawn.canon == cached_job.canon &&
+        drawn.mode == cached_job.mode &&
+        drawn.extent == cached_job.extent &&
+        cached_frames.length == (offscreen.frames ? offscreen.frames.length : 1)
+        )) {
+      trace('cached copy is not the same as what is being drawn');
+      trace('drawn: ' + JSON.stringify(drawn));
+      trace('cached: ' + JSON.stringify(cached_job));
+      return;
+    }
+    if (drawn.finished || (drawn.state !== null && !cached_job.finished &&
+        !(cached_job.state.opcount > drawn.state.opcount))) {
+      trace('cached copy (' + cached_job.state.opcount + ') ' +
+            'is less finished than what is drawn (' + drawn.state.opcount + ')');
+      return;
+    }
+    // First require that the bitmap be loaded.
+    if (!isbitmaploaded(requested.mode)) {
+      loadbitmap(requested.mode, function() {
+        restart_render_from_cache(cached_job, cached_frames);
+      });
+      return;
+    }
+    // Adjust the start time.
+    cached_job.starttime = (new Date).getTime() - cached_job.elapsed;
+    // Blit the shown frame to the screen.
+    if (cached_frames.length == 1) {
+      paintframe(cached_frames[0]);
+    }
+    start_render(cached_job, cached_frames);
+  }
+  // Driver for the main rendering loop.
+  function start_render(job_spec, cached_frames) {
+    // Overwrite current-job spec.
+    drawn = job_spec;
+    // Show in-progress UI.
+    ebi('editcontrol').className = 'loading';
+    // Prepare animation canvases if necessary.
+    var computation_frames = [0];
+    var drawing_frames = null;
+    var canvasarea = drawn.width * drawn.height;
+    if (requested.parameterized) {
+      computation_frames = [];
+      for (var frame = 0; frame <= t_quanta; ++frame) {
+        computation_frames.push(frame / t_quanta);
+      }
+      if (cached_frames) {
+        drawing_frames = cached_frames;
+      } else {
+        drawing_frames = [];
+        for (var frame = 0; frame <= t_quanta; ++frame) {
+          drawing_frames.push({
+            canvas: null,
+            ctx: null,
+            drawn_pixels: (frame == 0) ? canvasarea : 0,
+            same_as: null,
+            constant_rgb: null,
+            filled: (frame == 0)
+          });
+        }
+      }
+      offscreen.frames = drawing_frames;
+      startanimation();
+    } else {
+      offscreen.frames = null;
+      requested.animode = null;
+      stopanimation();
+    }
+    // Assemble inputs for the rendering worker.
+    var args = {
+      expression: drawn.expr,
+      extent: drawn.extent,
+      width: drawn.width,
+      height: drawn.height,
+      bitmap: modebitmap(drawn.mode),
+      modemix: modemix(drawn.mode),
+      frames: computation_frames,
+      imagedata: mainctx.createImageData(
+          Math.ceil(blit_blocksize * Math.sqrt(drawn.width / drawn.height)),
+          Math.ceil(blit_blocksize * Math.sqrt(drawn.height / drawn.width))),
+      state: drawn.state,
+      info: drawn.info
+    };
+    // Kill any ongoing rendering and then start a new rendering loop.
+    if (current_worker) { current_worker.terminate(); }
+    // Don't do any more work if already finished.
+    if (drawn.finished) {
+      ebi('editcontrol').className = '';
+      return;
+    }
+    var last_checkpoint_time = (new Date).getTime();
+    if (worker_script_url && window.Worker &&
+        (null !== (current_worker = spawn_worker()))) {
+      // Use web worker if available.
+      current_worker.onmessage = (function(event) { render(event.data); });
+      current_worker.postMessage(args);
+    } else {
+      // Otherwise just use a timer task.
+      current_worker = draw_conformal_map(requested.fn, args, 0, render);
+    }
+    // Allocate a tempeanvas for stretch blitting.
+    var tempcanvas = document.createElement('canvas');
+    // The callback for the rendering engine.  Executes the actual
+    // drawing operations on the underlying canvases.
+    function render(msg) {
+      drawn.elapsed = (new Date).getTime() - drawn.starttime;
+      if (msg.action == 'blit') {
+        var imgdata = msg.imagedata,
+            ctxes = framectxes(msg.frame), j, pixels;
+        if (msg.scalex == 1 && msg.scaley == 1) {
+          for (j = 0; j < ctxes.length; j++) {
+            ctxes[j].putImageData(imgdata, msg.x, msg.y);
+          }
+          pixels = imgdata.width * imgdata.height;
+        } else {
+          tempcanvas.width = imgdata.width;
+          tempcanvas.height = imgdata.height;
+          tempcanvas.getContext('2d').putImageData(imgdata, 0, 0);
+          for (j = 0; j < ctxes.length; j++) {
+            ctxes[j].save();
+            ctxes[j].scale(msg.scalex, msg.scaley);
+            ctxes[j].imageSmoothingEnabled = false;
+            ctxes[j].drawImage(tempcanvas, msg.x, msg.y);
+            ctxes[j].restore();
+          }
+          pixels = imgdata.width * msg.scalex * imgdata.height * msg.scaley;
+        }
+        if (offscreen.frames) {
+          var frame = offscreen.frames[msg.frame];
+          if (!frame.filled && frame.drawn_pixels < canvasarea) {
+            frame.drawn_pixels += pixels;
+            if (Math.round(frame.drawn_pixels) >= canvasarea) {
+              frame.filled = true;
+            }
+          }
+          frame.last_opcount = msg.state.opcount;
+        }
+        drawn.state = msg.state;
+      } else if (msg.action == 'copy') {
+        if (offscreen.frames[msg.frame].same_as === null) {
+          offscreen.frames[msg.frame].canvas = null;
+          offscreen.frames[msg.frame].ctx = null;
+          offscreen.frames[msg.frame].same_as = msg.sourceframe;
+          offscreen.frames[msg.frame].filled = true;
+          if (offscreen.frameshown == msg.frame &&
+            offscreen.frames[msg.sourceframe].canvas !== null) {
+            mainctx.drawImage(offscreen.frames[msg.sourceframe].canvas, 0, 0);
+          }
+        }
+      } else if (msg.action == 'fill') {
+        var rgb = msg.rgb.map(Math.floor);
+        if (drawn.info && msg.frame < drawn.info.length) {
+          drawn.info[msg.frame].constant_rgb = rgb;
+        }
+        var ctxes = framectxes(msg.frame);
+        if (offscreen.frames) {
+          offscreen.frames[msg.frame].canvas = null;
+          offscreen.frames[msg.frame].ctx = null;
+          offscreen.frames[msg.frame].filled = true;
+          offscreen.frames[msg.frame].drawn_pixels = 0;
+          offscreen.frames[msg.frame].last_opcount = msg.state.opcount;
+          offscreen.frames[msg.frame].constant_rgb = rgb;
+        }
+        if (offscreen.frameshown == msg.frame) {
+          mainctx.save();
+          mainctx.fillStyle = 'rgb(' + rgb.join(',') + ')';
+          mainctx.fillRect(0, 0, maincanvas.width, maincanvas.height);
+          mainctx.restore();
+        }
+        drawn.state = msg.state;
+      } else if (msg.action == 'info') {
+        drawn.info = msg.info;
+      } else if (msg.action == 'done') {
+        ebi('editcontrol').className = '';
+        if (current_worker) {
+          current_worker.terminate();
+          current_worker = null;
+        }
+        drawn.finished = true;
+        trace('finished ' + drawn.elapsed + 'ms '
+            + maincanvas.width + 'x' + maincanvas.height
+            + 'x' + (!offscreen.frames ? 1 : offscreen.frames.length)
+            + ' ' + (!drawn.mode ? '' : drawn.mode + ' ')
+            + drawn.canon);
+      } else if (msg.action == 'trace') {
+        trace(msg.message);
+      } else {
+        trace('unknown action ' + JSON.stringify(msg));
+      }
+      var current_time = (new Date).getTime();
+      if (cache_system !== null && drawn.elapsed > min_elapsed_to_cache &&
+          (drawn.finished ||
+          current_time - last_checkpoint_time > checkpoint_interval)) {
+        last_checkpoint_time = current_time;
+        var caching_drawn = drawn;
+        var caching_frames = frames_to_cache();
+        cache_system.save(caching_drawn, caching_frames, function() {
+          trace('cached ' + (drawn.finished ? 'finished' : 'checkpoint')
+                + ' ' + caching_drawn.elapsed + 'ms '
+                + caching_drawn.width + 'x' + caching_drawn.height
+                + 'x' + caching_frames.length + ' ' + caching_drawn.canon);
+        }, function(e) {
+          trace('unable to cache ' + (drawn.finished ? 'finished' : 'checkpoint')
+                + ' ' + caching_drawn.elapsed + 'ms '
+                + caching_drawn.width + 'x' + caching_drawn.height
+                + 'x' + caching_frames.length + ' ' + caching_drawn.canon);
+        });
+      }
+    }
+  }
+
+  // Parses a hash string similar to cgi args, except that the first
+  // part before the first & is assumed to be a single string instead
+  // a key-value pair.
+  function decodehash(h) {
+    var hashargs = h.substring(1).split('&');
+    var newfunc = window.decodeURIComponent(hashargs[0]);
+    var argdict = {};
+    for (var j = 1; j < hashargs.length; ++j) {
+      var eq = hashargs[j].indexOf('=');
+      if (eq == -1) { eq = hashargs[j].length; }
+      var k = window.decodeURIComponent(hashargs[j].slice(0, eq));
+      var v = eq < hashargs[j].length ?
+          window.decodeURIComponent(hashargs[j].slice(eq+1)) : null;
+      argdict[k] = v;
+    }
+    return { func: newfunc, args: argdict };
+  }
+
+  // The proper way to manage hash changes and title history:
+  // 1. The hash always reflects the {requested} ui state.  sethash()
+  //    should be called whenever {requested} might have changed.
+  // 2. sethash will not change the hash if it is already equivalent.
+  //    The current hash is always read before writing to ensure this.
+  // 3. When the hash is changed, the current history entry is reused
+  //    and overwritten if the hash just changed within a few seconds.
+  //    This avoids polluting history with repeated clicks or keys.
+  // 4. When the history entry is reused, the title is updated
+  //    immediately to keep the title accurate.
+  // 5. But when a new history entry is created, the title is not
+  //    updated by sethash.  It is updated by readhash() after a
+  //    hashchange notification arrives.  This is so that the history
+  //    entry saved for the old hash will keep the old title.
+  function sethash() {
+    var current = decodehash(window.location.hash);
+    var curb = current.args.b || null;
+    var cura = current.args.a || null;
+    var curz = current.args.z || default_extent;
+    if (current.func != requested.expr || curb != requested.mode
+        || cura != requested.animode || curz != requested.extent) {
+      var newhash = '#' + encodeURIComponent(requested.expr)
+        + (requested.mode === null ? '' : ('&b=' + requested.mode))
+        + (requested.animode === null ? '' : ('&a=' + requested.animode))
+        + (requested.extent === default_extent ?
+           '' : ('&z=' + requested.extent));
+      add_history_entry = true;
+      if (sethash_timer) {
+        add_history_entry = false;
+        window.clearTimeout(sethash_timer);
+      }
+      sethash_timer = window.setTimeout(function() {
+        sethash_timer = null;
+      }, sethash_delay);
+      if (add_history_entry) {
+        window.location.hash = newhash;
+      } else {
+        window.location.replace(newhash);
+        updatetitle();
+      }
+    }
+  }
+
+  // Called right after a hash change, to set the title to reflect
+  // the current navigation point.
+  function updatetitle() {
+    document.title = requested.expr +
+        (requested.extent == default_extent ? '' :
+          default_extent > requested.extent ?
+          ' (x' + (default_extent / requested.extent) + ')' :
+          ' (' + (default_extent * 100 / requested.extent) + '%)') +
+        (requested.mode === null ? '' :
+          ' - ' + requested.mode);
+  }
+
+  // Callback from hashchange, which triggers when the user hits
+  // the 'forward' or 'back' button; also called on initial page
+  // navigation.  Kicks off the drawing process if the new hash
+  // value is different from what is currently being processed.
+  function readhash() {
+    var decoded = decodehash(window.location.hash);
+    var newb = decoded.args.b || null;
+    var newa = decoded.args.a || null;
+    var newz = decoded.args.z || default_extent;
+    var need_redraw = false;
+    if (newb != requested.mode) {
+      requested.mode = newb;
+      need_redraw = true;
+    }
+    if (newa != requested.animode) {
+      requested.animode = newa;
+      need_redraw = true;
+    }
+    if (decoded.func != requested.expr) {
+      ebi('expr').value = decoded.func;
+      setfunc(true, true);
+      need_redraw = true;
+    }
+    if (newz != requested.extent) {
+      requested.extent = newz;
+      need_redraw = true;
+    }
+    updatetitle();
+    if (need_redraw) {
+      if (!newa && timelineui.animode) { cancelplay(); }
+      loadbitmap(requested.mode, redraw);
+    }
+  }
+
+  // When the input box loses focus, it reverts to the last successfully
+  // parsed expression.
+  function revertfunc() {
+    ebi('expr').value = requested.expr;
+  }
+
+  // A click on the arth button rotates through the available map patterns.
+  function togglebitmap() {
+    var bitmaps = [null, 'earth', 'earth+'];
+    for (var j = 0; j < bitmaps.length; ++j) {
+      if (requested.mode == bitmaps[j]) {
+        requested.mode = bitmaps[(j + 1) % bitmaps.length];
+        break;
+      }
+    }
+    sethash();
+    if (requested.mode != null) {
+      var target = requested.mode;
+      loadbitmap(requested.mode, redraw);
+    } else {
+      redraw();
+    }
+  }
+
+  // The fullscreen button just opens a new window when fullscreen is diabled.
+  function opennewwindow() {
+    window.open(window.location.href, '_blank');
+  }
+
+  // Handle cross-browser fullscreen toggling.
+  function togglefullscreen() {
+    if (!document.fullscreenElement &&
+        !document.mozFullScreenElement &&
+        !document.webkitFullscreenElement) {  // current working methods
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if (document.documentElement.mozRequestFullScreen) {
+        document.documentElement.mozRequestFullScreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen(
+            Element.ALLOW_KEYBOARD_INPUT);
+      }
+    } else {
+      if (document.cancelFullScreen) {
+        document.cancelFullScreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.webkitCancelFullScreen) {
+        document.webkitCancelFullScreen();
+      }
+    }
+  }
+
+  // True if the requested mode wants to layer the grid in the pattern.
+  function modemix(mode) {
+    return (mode !== null && mode.substr(mode.length - 1) == '+');
+  }
+
+  // Returns the bitmap name for the requested mode.
+  function modebitmapname(mode) {
+    if (modemix(mode)) {
+      return mode.substr(0, mode.length - 1);
+    }
+    return mode;
+  }
+
+  // The bitmap for the given mode.
+  function modebitmap(mode) {
+    var name = modebitmapname(mode);
+    if (name === null) { return null; }
+    if (loaded_bitmaps.hasOwnProperty(name)) { return loaded_bitmaps[name]; }
+    return null;
+  }
+
+  // True if the needed bitmap has been loaded.
+  function isbitmaploaded(mode) {
+    var name = modebitmapname(mode);
+    if (name === null) { return true; }
+    return (loaded_bitmaps.hasOwnProperty(name));
+  }
+
+  // Load the requested mode's bitmap and call the callback when done.
+  // In the presence of load errors, retries a few times before giving
+  // up, but never admits failure: instead will proceed with a
+   // partially-filled (or black) bitmap.
+  function loadbitmap(mode, done) {
+    if (mode === null || modebitmap(mode) !== null) {
+      done();
+      return;
+    }
+    var textures = {
+      earth: {
+        width: 4096, height: 2048,
+        urls: [
+          { url: 'earth/tx_2_0.jpg', x:0, y:0 },
+          { url: 'earth/tx_2_1.jpg', x:0, y:1024 },
+          { url: 'earth/tx_3_0.jpg', x:1024, y:0 },
+          { url: 'earth/tx_3_1.jpg', x:1024, y:1024 },
+          { url: 'earth/tx_0_0.jpg', x:2048, y:0 },
+          { url: 'earth/tx_0_1.jpg', x:2048, y:1024 },
+          { url: 'earth/tx_1_0.jpg', x:3072, y:0 },
+          { url: 'earth/tx_1_1.jpg', x:3072, y:1024 }
+        ]
+      }
+    };
+    var name = modebitmapname(mode);
+    if (!textures.hasOwnProperty(name)) {
+      loaded_bitmaps[name] = null;
+      done();
+      return;
+    }
+    var texture = textures[name];
+    var images = [];
+    var loaded = 0;
+    var failed = 0;
+    for (var j = 0; j < texture.urls.length; ++j) {
+      var img = images[j] = new Image();
+      bind(img, 'load', function() {
+        loaded += 1;
+        if (loaded + failed == images.length) { finish(); }
+      });
+      bind(img, 'error', function() {
+        failed += 1;
+        if (loaded + failed == images.length) { finish(); }
+      });
+      img.src = texture.urls[j].url;
+    }
+    function finish() {
+      if (failed) {
+        bitmap_load_failures += 1;
+        trace('bitmap load failure #' + bitmap_load_failures);
+        if (bitmap_load_failures < bitmap_load_failure_retries) {
+          window.setTimeout(
+              function() { loadbitmap(mode, done); }, change_delay);
+          return;
+        }
+      }
+      bitmap_load_failures = 0;
+      if (!loaded_bitmaps.hasOwnProperty(name)) {
+        var tempcanvas = document.createElement('canvas');
+        tempcanvas.width = texture.width;
+        tempcanvas.height = texture.height;
+        var ctx = tempcanvas.getContext("2d");
+        for (j = 0; j < images.length; ++j) {
+          ctx.drawImage(images[j], texture.urls[j].x, texture.urls[j].y);
+        }
+        loaded_bitmaps[name]
+            = ctx.getImageData(0, 0, texture.width, texture.height);
+      }
+      done(!failed);
+    }
+  }
+  run();
+} // end init
+
+</script>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- WORKER DISPATCH       - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<script type="text/jsworker" id="dispatch">
+
+// The web worker must reparse the expression since a function
+// cannot be sent to it.  Then it just invokes draw_conformal_map
+// with a negative delay (to avoid timer use) and with postMessage
+// as the callback.
+self.onmessage = function(event) {
+  var data = event.data;
+  var parsed = complex_expression(data.expression);
+  if (parsed == null) {
+    postMessage({ action: 'done', success: false });
+  }
+  var delay = -1; // OR: event.data.frames.length > 1 ? 0 : -1;
+  draw_conformal_map(parsed.fn, data, delay, postMessage);
+}
+
+// For web worker debug output: post the message back to the main thread.
+function trace(msg) {
+  postMessage({
+    action: 'trace',
+    message: (typeof msg == 'string' ? msg : JSON.stringify(msg))
+  });
+}
+
+</script>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- RENDERING SCRIPT      - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<script id="render">
+
+// To use this draw_conformal_map, pass a complex function, rendering
+// arguments, a time delay, and a rendering callback function.
+// It will draw a conformal map visualization based on the
+// specification.  Since the drawing will take some time,
+// it will divide up the drawing in time slices and it can
+// either separate those times by a setTimeout delay, or it
+// can loop through them without stopping (delay=-1) on
+// a worker thread.
+//
+// The function should map {r:, i:} records to {r:, i:} records.
+// Example: (function identity(z) { return {r:z.r, i:z.i}; })
+//
+// The args is an object with the following fields:
+//   extent: the (complex-number) length of the shorter dimension
+//   width:  the target canvas pixel width
+//   height: the target canvas pixel height
+//   bitmap: (optional) the ImageData to use for colors, e.g., a globe
+//   modemix: true to mix the bitmap with the default grid pattern
+//   frames: an array of values for the 't' parameter
+//   imagedata: a bitmap to be used for blitting to the target canvas
+//
+// The delay should be a positive number to use a setTimeout loop,
+// and -1 to use a tight loop without delays.
+//
+// The postfunc callback should expect to be called repeatedly with
+// objects of the following forms:
+//
+//   action: 'blit' - the main drawing function
+//     scalex:, scaley: the factor by which to stretch the drawn bits
+//     x:, y: the top-left offset of the drawn bits in the target canvas
+//     frame: the index of the target frame (one for each value of t)
+//     imagedata: the image bits
+//
+//   action: 'copy' - used when two frames seem to be identical
+//     frame: the target frame
+//     sourceframe: the source frame from which to copy all bits
+//
+//   action: 'fill' - used when a frame seems to be one color only
+//     frame: the target frame
+//     rgb: [r,g,b] the fill color for the whole frame
+//
+//   action: 'done' - the last message sent back
+//     success: true/false
+//
+function draw_conformal_map(
+    farg, args, delay, postfunc) {
+  var extent = args.extent;
+  var canvaswidth = args.width;
+  var canvasheight = args.height;
+  var imagedata = args.imagedata;
+  var bitmap = args.bitmap;
+  var frames = args.frames;
+  var maxf = frames.length;
+  var centercol = Math.floor(canvaswidth / 2);
+  var centerrow = Math.floor(canvasheight / 2);
+  var scale = extent / Math.max(100, Math.min(canvaswidth, canvasheight));
+  var blockwidth = imagedata.width;
+  var blockheight = imagedata.height;
+  var blockarea = blockwidth * blockheight;
+  var maxd = Math.ceil(centerrow / blockheight + 0.5)
+      + Math.ceil(centercol / blockwidth + 0.5);
+  var subsample = 3;
+  var colorfunc = (bitmap === null ? grid_color :
+      args.modemix ? mix_color : bitmap_color);
+  var rainbow_samples = 360;
+  var rainbow = compute_rainbow();
+  var state = args.state !== null ? args.state
+      : { stage: -1, substage: { }, opcount: 0  };
+  var skip_info = args.info !== null ? args.info : [];
+  // Plan out preview stages, each more than doubling resolution.
+  var stages = [1];
+  var complete_bits = canvaswidth * subsample / blockwidth;
+  while (stages[stages.length - 1] * 4 + 2 < complete_bits) {
+    stages.push(stages[stages.length - 1] * 2 + 1);
+  }
+
+  function run() {
+    // Then execute the plan in a continue_drawing loop, either using
+    // a timer or in a tight loop.
+    if (delay >= 0) {
+      var terminated = false;
+      var timed_drawing = (function() {
+        if (!terminated && continue_drawing(state)) {
+          setTimeout(timed_drawing, delay);
+        }
+      });
+      setTimeout(timed_drawing, delay);
+      return { terminate: function() { terminated = true; } };
+    } else {
+      while (continue_drawing(state)) { }
+    }
+  }
+  // The main state machine: first, compute_skip_info to optimize
+  // identical and possibly solid frames.  Then call preview_drawing
+  // for each level of resolution, for each frame.  Then proceed with
+  // full resolution drawing, and finally post 'done'.
+  function continue_drawing(state) {
+    while (true) {
+      if (state.stage < 0) {
+        compute_skip_info();
+        state.stage = 0;
+        return true;
+      } else if (state.stage < stages.length) {
+        var blocks = stages[state.stage];
+        var skipf = (1 << (stages.length - state.stage));
+        if (preview_drawing(blocks, skipf, state)) {
+          return true;
+        }
+        state.stage += 1;
+        state.substage = { };
+      } else if (state.stage == stages.length) {
+        if (full_drawing(state)) {
+          return true;
+        }
+        state.stage += 1;
+      }  else {
+        postfunc({ action: 'done', success: true });
+        return false;
+      }
+    }
+  }
+
+  // The optimization function: samples 100 random points in the visible
+  // portion of the plane (plus four tight points near the origin) and
+  // determines if any frames are likely to be identical or constant.
+  function compute_skip_info() {
+    var sample_count = 100;
+    var points = [{r:scale/2,i:scale/2}, {r:-scale/2,i:scale/2},
+                  {r:scale/2,i:-scale/2}, {r:-scale/2,i:-scale/2}];
+    for (var j = 0; j < sample_count; ++j) {
+      var sh = Math.random();
+      points.push({
+        r: (Math.random() * sh * canvaswidth - centercol) * scale,
+        i: (Math.random() * sh * canvasheight - centerrow) * scale
+      });
+    }
+    var ident = {};
+    var f = 0;
+    while (true) {
+      // Note that seems_constant will exclude the frame from being
+      // judged same_as any other frame (to avoid losing nonzero disks
+      // in a mostly-zero function).  Also, before the frame is assumed
+      // to be constant, confirm_constant will sample many more points.
+      var seems_constant = true;
+      var values = [];
+      for (var j = 0; j < sample_count; ++j) {
+        var val = (farg(points[j], frames[f]));
+        values.push(val.r + ',' + val.i);
+        if (seems_constant && values[values.length - 1] != values[0]) {
+          seems_constant = false;
+        }
+      }
+      var vs = values.join(',');
+      var same_as = null;
+      // If all 100 points have the same complex values as another frame,
+      // the set same_as to point to the other frame.  The frames are
+      // visited in scatteradvance order, so the earliest frames to be
+      // computed (not necessarily the smallest t) are the 'originals'.
+      if (!ident.hasOwnProperty(vs)) {
+        if (!seems_constant) { ident[vs] = f; }
+      } else {
+        same_as = ident[vs];
+      }
+      skip_info[f] = {
+        same_as: same_as,
+        seems_constant: seems_constant,
+        constant_rgb: null
+      };
+      f = scatteradvance(f, frames.length);
+      if (f == 0) { break; }
+    }
+    postfunc({
+      action: 'info',
+      info: skip_info
+    });
+  }
+
+  // Called during optimized drawig to confirm that a seems_constant
+  // frame is visually constant over the entire visible plane;
+  // and determimines the rgb color to fill.
+  function confirm_constant(framenum) {
+    var inc = canvaswidth / blockwidth * scale;
+    var snc = (-centercol) * scale + inc/2;
+    var inr = -canvasheight / blockheight * scale;
+    var snr = (centerrow) * scale + inr/2;
+    var t = frames[framenum]
+    var rgb = null;
+    var j = snr;
+    for (var pr = 0; pr < blockheight; ++pr) {
+      var r = snc;
+      for (var pc = 0; pc < blockwidth; ++pc) {
+        var nrgb = colorfunc(farg({r:r, i:j}, t));
+        if (rgb === null) {
+          rgb = nrgb;
+        } else {
+          if (rgb[0] != nrgb[0]) return null;
+          if (rgb[1] != nrgb[1]) return null;
+          if (rgb[2] != nrgb[2]) return null;
+        }
+        r += inc;
+      }
+      j += inr;
+    }
+    return rgb;
+  }
+
+  // Called to see if this frame can be done trivially - either because
+  // it is a copy of another frame, or because it is constant.
+  function skip_computation(off, exit, state) {
+    var info = skip_info[off.f];
+    if (info.same_as !== null) {
+      postfunc({
+        action: 'copy',
+        frame: off.f,
+        sourceframe: skip_info[off.f].same_as
+      });
+      off.c = exit;
+      return true;
+    } else if (info.seems_constant) {
+      if (info.constant_rgb === null) {
+        info.constant_rgb = confirm_constant(off.f);
+        info.seems_constant = (info.constant_rgb !== null);
+        if (!info.seems_constant) { return false; }
+        state.opcount += 1;
+        postfunc({
+          action: 'fill',
+          rgb: info.constant_rgb,
+          frame: off.f,
+          state: state
+        });
+      }
+      off.c = exit;
+      return true;
+    }
+    return false;
+  }
+
+  // Picks the next block to draw and opcount it to the target frame.
+  // previewblocks it the number of blit-blocks wide and tall into which
+  //   the underlying frame is divided.
+  // skipf the frame stride to be used - frames are advanced in a way so
+  //   that only one out of each skipf frames is rendered.
+  // off is a state variable and tracks the last drawn block and frame.
+  //   it is advanced once in spiral order on each frame, and in scattered
+  //   order through all the frames.
+  // After a drawing blit is done, off is advanced once and true is returned.
+  // After there is no more drawing to be done, false is returned.
+  function preview_drawing(previewblocks, skipf, state) {
+    var off = state.substage;
+    var previewxscale = canvaswidth / blockwidth / previewblocks;
+    var previewyscale = canvasheight / blockheight / previewblocks;
+    while (true) {
+      if (!spiraladvance(off, previewblocks, maxf, skipf)) { return false; }
+      if (skip_computation(off, previewblocks, state)) { return true; }
+      var sr = off.r + (previewblocks - 1) / 2;
+      var sc = off.c + (previewblocks - 1) / 2;
+      if (sr >= 0 && sc >= 0 && sr < previewblocks && sc < previewblocks) {
+        var inc = previewxscale * scale;
+        var snc = (sc * canvaswidth / previewblocks - centercol) * scale
+                  + inc/2;
+        var inr = -previewyscale * scale;
+        var snr = (centerrow - sr * canvasheight / previewblocks) * scale
+                  + inr/2;
+        var da = imagedata.data;
+        var t = frames[off.f];
+        var j = snr;
+        for (var pr = 0; pr < blockheight; ++pr) {
+          var r = snc;
+          var apos = (pr * blockwidth ) * 4;
+          for (var pc = 0; pc < blockwidth; ++pc) {
+            var rgb = colorfunc(farg({r:r, i:j}, t));
+            da[apos++] = rgb[0];
+            da[apos++] = rgb[1];
+            da[apos++] = rgb[2];
+            da[apos++] = 255;
+            r += inc;
+          }
+          j += inr;
+        }
+        state.opcount += 1;
+        postfunc({
+          action: 'blit',
+          state: state,
+          scalex: previewxscale, scaley: previewyscale,
+          x: sc * blockwidth, y: sr * blockheight,
+          frame: off.f,
+          imagedata: imagedata
+        });
+        return true;
+      }
+    }
+  }
+
+  // Renders a full-resolution block with antialiasing.
+  // off is a state variable and tracks the last drawn block and frame.
+  //   it is advanced once in spiral order on each frame, and in scattered
+  //   order through all the frames.
+  // After a drawing blit is done, off is advanced once and true is returned.
+  // After there is no more drawing to be done, false is returned.
+  function full_drawing(state) {
+    var off = state.substage;
+    var ss = scale / subsample;
+    var mid = (subsample - 1) / 2;
+    var data = imagedata.data;
+    var subsample2 = subsample * subsample;
+    while (true) {
+      if (!spiraladvance(off, maxd, maxf, 1)) { return false; }
+      if (skip_computation(off, maxd, state)) { return true; }
+      var t = frames[off.f];
+      var cstart = off.c * blockwidth
+                   + Math.floor((canvaswidth - blockwidth) / 2);
+      var rstart = off.r * blockheight
+                   + Math.floor((canvasheight - blockheight) / 2);
+      if (cstart <= -blockwidth || rstart <= -blockheight ||
+          cstart >= canvaswidth || rstart >= canvasheight) continue;
+      for (row = Math.max(0, rstart);
+           row < rstart+blockheight && row < canvasheight; row++) {
+        var j = (centerrow - 0.5 - row) * scale;
+        for (col = Math.max(0, cstart);
+              col < cstart+blockwidth && col < canvaswidth; col++) {
+          var r = (col - centercol + 0.5) * scale;
+          // The inner loop: subsample a single pixel and save the avg color.
+          var rs = 0, gs = 0, bs = 0;
+          for (var sj = 0; sj < subsample; ++sj) {
+            for (var sk = 0; sk < subsample; ++sk) {
+              var rgb = colorfunc(farg(
+                {r: r + (sj - mid) * ss, i: j + (sk - mid) * ss}, t));
+              rs += rgb[0]; gs += rgb[1]; bs += rgb[2];
+            }
+          }
+          var apos = ((row - rstart) * blockwidth + col - cstart) * 4;
+          data[apos] = rs / subsample2;
+          data[apos+1] = gs / subsample2;
+          data[apos+2] = bs / subsample2;
+          data[apos+3] = 255;
+        }
+      }
+      state.opcount += 1;
+      postfunc({
+        action: 'blit',
+        state: state,
+        scalex: 1, scaley: 1,
+        x: cstart, y: rstart,
+        frame: off.f,
+        imagedata: imagedata
+      });
+      return true;
+    }
+  }
+
+  function mix_color(z) {
+    var c1 = grid_color(z);
+    var c2 = bitmap_color(z);
+    return [(c1[0] + 3 * c2[0]) / 4,
+            (c1[1] + 3 * c2[1]) / 4,
+            (c1[2] + 3 * c2[2]) / 4];
+  }
+
+  // Given that bitmap contains an equirectangular projection of a
+  // spherical map with "North" upwards, bitmap_color returns a North
+  // polar azimuthual projection of the globe onto the complex plane,
+  // with North at the origin and South at infinity.  The input is
+  // a complex value, and the output is an rgb color.
+  function bitmap_color(z) {
+    var r = z.r, j = z.i;
+    var m = Math.sqrt(r*r + j*j);
+    var lat = Math.atan2(m, 1) / Math.PI * 2;
+    var lon = Math.atan2(j, r) / Math.PI / 2;
+    var x = (Math.floor(bitmap.width * lon) + bitmap.width) % bitmap.width;
+    var y = (Math.floor(bitmap.height * lat) + bitmap.height) % bitmap.height;
+    var loc = 4 * (x + y * bitmap.width);
+    // Returning this way is WAY faster than bitmap.data.subarray.
+    return [bitmap.data[loc], bitmap.data[loc + 1], bitmap.data[loc + 2]];
+  }
+
+  // Implements domain coloring: reeturns an rgb color assigned to a
+  // complex number value.
+  function grid_color(z) {
+    var r = z.r, j = z.i;
+    var r2 = r*r;
+    var j2 = j*j;
+    var dist2 = r2 + j2;
+    var light = 1 - Math.abs((Math.floor(r*16) + Math.floor(j*16))) % 2;
+    var ring = 0;
+    if (dist2 <= 1.12890625 && dist2 >= 0.87890625) {
+      ring = 2;
+    } else if (dist2 <= 0.00390625) {
+      return light ? [0,0,0] : [0xff,0xff,0xff];  // ring at 0
+    } else if (dist2 >= 256) {
+      if ((r >= 0) != (j >= 0)) { return [32,32,32]; }
+      ring = 1;  // ring at infinity
+    } else if (!light) {
+      return [0,0,0];
+    }
+    var dist = dist2 < 1 ? 1 : Math.sqrt(r2 + j2);
+    switch (ring) {
+    case 1:
+      // ring at infinity
+      var s = 256 * 16 / dist;
+      return quick_hb2rgb(j, -r, s);
+    case 2:
+      // ring at unity
+      var j12 = (Math.abs(j) - 1) * (Math.abs(j) - 1);
+      var r12 = (Math.abs(r) - 1) * (Math.abs(r) - 1);
+      if (j2 > r2 ? r2 + j12 > 0.00390625 :
+                    r12 + j2 > 0.00390625) {
+        var gray = 170 - 85 * (octang(r, j) % 2) / 2;
+        return dist <= 1 ? [gray,gray,gray] : [gray+85,gray+85,gray+85];
+      }
+      if (!light) { return [0,0,0]; }
+      // fallthrough
+    default:
+      return quick_hb2rgb(j, -r, (dist < 1 ? 256 : 256 / dist));
+    }
+  }
+
+  // Returns hsb(atan2(j, r), 1, v) quickly.
+  function quick_hb2rgb(j, r, v) {
+    h = Math.floor(octang(r, j) * (rainbow_samples / 8)) * 3;
+    return [v * rainbow[h], v * rainbow[h + 1], v * rainbow[h + 2]];
+  }
+
+  // Precomputes the rainbow array
+  function compute_rainbow() {
+    result = [];
+    for (var j = 0; j <= rainbow_samples; ++j) {
+      var a = octang2ang(8 * j / rainbow_samples) / Math.PI / 2;
+      var c = hb2rgb(a, 1);
+      for (k = 0; k < 3; ++k) {
+        result.push(c[k]);
+      }
+    }
+    return result;
+  }
+
+  // Given r and j, returns a number from 0 to 8 which varies monotonically
+  // with the angle.  Requires only a single division; used for deriving
+  // color without use of atan2.
+  function octang(r, j) {
+    var aj = Math.abs(j),
+        ar = Math.abs(r),
+        sl = aj < ar ? aj / ar : 2 - ar / aj;
+    if (r < 0) {
+      sl = 4 - sl;
+    }
+    if (j < 0) {
+      sl = 8 - sl;
+    }
+    return sl;
+  }
+
+  // Slowly converts an octang to an actual angle, with the circle
+  // scaled to range [0...1].
+  function octang2ang(o) {
+    o = o - Math.floor(o / 8) * 8;
+    var quarters = Math.floor(o / 2),
+        slope2 = o - quarters * 2,
+        result = quarters * Math.PI/2 + (slope2 < 1 ?
+            Math.atan(slope2) : Math.PI/2 - Math.atan(2 - slope2));
+    return result;
+  }
+
+  // Does the math to compute hsb(h, 1, v)
+  function hb2rgb(h, v) {
+    var r, g, b, x, c;
+    h = (h - Math.floor(h)) * 6;
+    x = v * (1 - Math.abs(h % 2 - 1));
+    h = ~~h;
+    switch (h) {
+    case 0: return [v, x, 0];
+    case 1: return [x, v, 0];
+    case 2: return [0, v, x];
+    case 3: return [0, x, v];
+    case 4: return [x, 0, v];
+    case 5: return [v, 0, x];
+    }
+  }
+
+  // Returns the smallest binary of all "1"s that is no smaller than x,
+  // for any x up to 16-bits.
+  function smear_bits_right(x) {
+    x |= x >> 8;
+    x |= x >> 4;
+    x |= x >> 2;
+    x |= x >> 1;
+    return x;
+  }
+
+  // Implements reverse binary counting (most significant bit advances first)
+  // returning only numbers smaller than maxf.
+  function scatteradvance(x, maxf) {
+    var bits = smear_bits_right(maxf), s, flip;
+    do {
+      s = smear_bits_right(bits ^ x);
+      flip = (s + 1) >> 1;
+      x = (x | flip) & s;
+    } while (x >= maxf);
+    return x;
+  }
+
+  // Implements the block drawing order, advancing off to the next
+  // position.  The initial value of off should be the empty object {};
+  // then this function will advance to (0,0,0).  The offset r and c will
+  // advance spirally out from {0,0} as long as the (manhattan) radius is
+  // less than maxd.  Then the frame is advanced using scatteradvance,
+  // and the spiral starts at the center again on the new frame.  Once
+  // every possible point on every frame is visited, the function
+  // returns false.
+  function spiraladvance(off, maxd, maxf, skipf) {
+    if (!off.hasOwnProperty('r')) {
+      off.r = off.c = off.f = 0;
+      return true;
+    }
+    var d = Math.abs(off.r) + Math.abs(off.c);
+    if (off.c < d) {
+      var sc = off.r < 0 || (off.r == 0 && off.c > 0) ? -1 : 1;
+      var sr = off.c > 0 || (off.c == 0 && off.r > 0) ? -1 : 1;
+      off.c += sc;
+      off.r += sr;
+      return true;
+    }
+    off.r -= 1;
+    if (off.c + 1 < maxd) {
+      return true;
+    }
+    off.f = scatteradvance(off.f / skipf, Math.ceil(maxf / skipf)) * skipf;
+    off.r = off.c = 0;
+    if (off.f != 0) {
+      return true;
+    }
+    return false;
+  }
+  return run();
+}  // end of draw_conformal_map
+</script>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- CACHING SYSTEM        - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<script>
+
+function init_cache_system(
+    cache_version, in_memory_frames,
+    max_filesystem_space, min_filesystem_space) {
+  var filesystem = null;
+  var complex_dir = null;
+  var initializing = [];
+  function err(e) {
+    trace('filesystem error ' + e.code);
+  }
+  if (max_filesystem_space > 0 && window.Blob && window.URL
+        && window.URL.createObjectURL && window.atob
+        && window.ArrayBuffer && window.Uint8Array && window.FileReader
+        && (window.requestFileSystem || window.webkitRequestFileSystem)) {
+    try {
+      // Initialize by grabbing a filesystem and creating the /complex dir.
+      window.requestFileSystem = window.requestFileSystem
+                              || window.webkitRequestFileSystem;
+      window.storageInfo = window.storageInfo || window.webkitStorageInfo;
+      if (max_filesystem_space > 0 && window.requestFileSystem) {
+        window.requestFileSystem(window.TEMPORARY, max_filesystem_space,
+          function (fs) {
+          fs.root.getDirectory('complex', { create: true }, function(d) {
+            window.storageInfo.queryUsageAndQuota(
+                window.TEMPORARY, function(u, r) {
+              if (u + r <= min_filesystem_space) {
+                trace('insufficient space');
+                err({code:0});
+                return;
+              }
+              filesystem = fs;
+              complex_dir = d;
+              finish_init();
+              trace('initialized cache - used: ' + u + ' remaining: ' + r);
+              delete_obsolete();
+            }, err);
+          }, err);
+        }, err);
+      }
+    } catch (e) {
+      trace('filesystem init exception' + e);
+      filesystem = null;
+      complex_dir = null;
+      finish_init();
+    }
+  } else {
+    trace('not using filesystem');
+    finish_init();
+  }
+  function after_init(fn) {
+    initializing.push(fn);
+  }
+  function finish_init() {
+    var deferred = initializing;
+    initializing = null;
+    for (var j = 0; j < deferred.length; ++j) {
+      deferred[j]();
+    }
+  }
+  // Converts a data url to a blob.
+  function blob_from_data_url(url) {
+    var j, sp = url.split(','),
+        mimetype = sp[0].split(':')[1].split(';')[0],
+        bytestr = (sp[0].indexOf('base64') >= 0 ?
+            window.atob(sp[1]) : window.decodeURIComponent(sp[1])),
+        buffer = new ArrayBuffer(bytestr.length),
+        intarray = new Uint8Array(buffer);
+    for (j = 0; j < bytestr.length; ++j) {
+      intarray[j] = bytestr.charCodeAt(j);
+    }
+    return new Blob([intarray], {type: mimetype});
+  }
+  // Converts a canvas to a blob in png form, which is passed to the
+  // done callback.
+  function canvas_to_blob(canvas, done) {
+    if (canvas.toBlob) {
+      canvas.toBlob(done, 'image/png');
+    } else {
+      // replace by toBlob when available
+      done(blob_from_data_url(canvas.toDataURL('image/png')));
+    }
+  }
+  // Writes a blob to a file entry
+  function write_blob_to_file(d, filename, blob, done, err) {
+    d.getFile(filename, { create: true }, function(f) {
+      // ('writing to ' + f.fullPath);
+      // Create a FileWriter object for our FileEntry (log.txt).
+      f.createWriter(function(writer) {
+        writer.onwriteend = done;
+        writer.onerror = function(e) { err(writer.error); };
+        writer.write(blob);
+      }, err);
+    }, err);
+  }
+  // Writes a string to a file entry
+  function write_string_to_file(d, filename, str, done, err) {
+    write_blob_to_file(
+        d, filename, new Blob([str], {type: 'application/json'}), done, err);
+  }
+  // Load filesystem file into canvas, and call done or err when done.
+  function render_entry_in_canvas(entry, canvas, done, err) {
+    var blob_url = entry.toURL('image/png'),
+        image = new Image();
+    image.onload = (function() {
+      canvas.width = image.width;
+      canvas.height = image.height;
+      canvas.getContext('2d').drawImage(image, 0, 0);
+      done();
+    });
+    image.onerror = err;
+    image.src = blob_url;
+  }
+  // Load image blob into a canvas, and call done or err when done.
+  function render_blob_in_canvas(blob, canvas, done, err) {
+    var blob_url = window.URL.createObjectURL(blob),
+        image = new Image();
+    function cleanup() { window.URL.revokeObjectURL(blob_url); }
+    image.onload = (function() {
+      canvas.width = image.width;
+      canvas.height = image.height;
+      canvas.getContext('2d').drawImage(image, 0, 0);
+      cleanup();
+      done();
+    });
+    image.onerror = (function(e) { cleanup(); err(e); });
+    image.src = blob_url;
+  }
+  // Load the blob as a text file and call done with the contents.
+  function load_blob_as_text(blob, done, err) {
+    var reader = new FileReader();
+    reader.onload = function() { done(reader.result); };
+    reader.onerror = function() { err(reader.error); };
+    reader.readAsText(blob, 'utf-8');
+  }
+  // Reads a whole directory object d asynchronously, including
+  // metadata if opt.metadata = true, and returning only filenames
+  // matching opt.pattern if a regexp is supplied in that field.
+  // On succcess, the (done) callback is called with an array
+  // [{entry: entry, metadata: meta}, {...}...].  On failure, done
+  // is called with null.
+  function list_directory(d, opt, done, err) {
+    var reader = d.createReader();
+    var metadata = opt ? opt.metadata || false : false;
+    var pattern = opt ? opt.pattern || null : null;
+    var result = [];
+    var batch = [];
+    var batch_index = 0;
+    function process_next_entry() {
+      while (true) {
+        if (batch_index >= batch.length) {
+          reader.readEntries(function(e) {
+            if (e.length == 0) { done(result); return; }
+            batch = e;
+            batch_index = 0;
+            process_next_entry();
+          }, err);
+          return;
+        }
+        if (pattern) {
+          while (batch_index < batch.length &&
+                 !pattern.test(batch[batch_index].name)) { batch_index += 1; }
+          if (batch_index >= batch.length) {
+            continue;
+          }
+        }
+        if (metadata) {
+          batch[batch_index].getMetadata(function(meta) {
+            result.push({ entry: batch[batch_index], metadata: meta });
+            batch_index += 1;
+            process_next_entry();
+          }, err);
+          return;
+        }
+        result.push({ entry: batch[batch_index] });
+        batch_index += 1;
+      }
+    }
+    process_next_entry();
+  }
+  // Creates or modifies a file in the directory called "touched_#ts"
+  // in order to update the directory's modification time.
+  function touch_dir(d, ts, done, err) {
+    var filename = 'touched_' + ts;
+    list_directory(d, { pattern: /^touched_/ }, function(entries) {
+      if (entries.length == 0) {
+        d.getFile(filename, { create: true }, done, err);
+      } else {
+        entries[0].entry.moveTo(d, filename, done, err);
+      }
+    }, err);
+  }
+  // Creates a temporary directory.
+  function get_temp_dir(p, done, err) {
+    var name = 'temp_' + ((new Date).getTime() + Math.random());
+    p.getDirectory(name, { create: true, exclusive: true }, done, err);
+  }
+  // Renames the given directory to a specific filename but first
+  // deletes any existing entry with the same name first.
+  function move_and_overwrite(source, p, name, done, err) {
+    function move_and_return() {
+      source.moveTo(p, name, done, err);
+    }
+    // Look for the directory without creating it: if found, then delete it;
+    // if not found, then check if there is a file, and delete it;
+    // after deleting, or if there is no file, then just create the directory.
+    p.getDirectory(name, { create: false }, function(e) {
+      e.removeRecursively(move_and_return, err);
+    }, function() {
+      p.getFile(name, { create: false }, function(e) {
+        e.remove(move_and_return, err);
+      }, move_and_return);
+    });
+  }
+  // Moves a file or directory to a
+  // an existing directory or file with the same name first.
+  function get_empty_dir(p, name, done, err) {
+    function create_and_return() {
+      p.getDirectory(name, { create: true, exclusive: true }, done, err);
+    }
+    // Look for the directory without creating it: if found, then delete it;
+    // if not found, then check if there is a file, and delete it;
+    // after deleting, or if there is no file, then just create the directory.
+    p.getDirectory(name, { create: false }, function(e) {
+      e.removeRecursively(create_and_return, err);
+    }, function() {
+      p.getFile(name, { create: false }, function(e) {
+        e.remove(create_and_return, err);
+      }, create_and_return);
+    })
+  }
+  // If free space is less than the given amount, then repeatedly
+  // deletes the oldest 1/3 of the files and directories until
+  // either there is enough free space, or the directory is empty.
+  // Calls the callback with 0 if there is an error (or no free space),
+  // and with the number of bytes free otherwise.
+  function remove_subdirs_until_free(d, done, err) {
+    if (!window.storageInfo ||
+        !window.storageInfo.queryUsageAndQuota) { err({code:0}); return; }
+    function ensure_more_space() {
+      window.storageInfo.queryUsageAndQuota(window.TEMPORARY,
+      function(used, remaining) {
+        if (remaining >= min_filesystem_space &&
+            used <= max_filesystem_space) { done(remaining); return; }
+        list_directory(d, { metadata: true }, function(entries) {
+          if (entries.length == 0) { done(remaining); return; }
+          entries.sort(function(a, b) {
+            return a.metadata.modificationTime.getTime() -
+                   b.metadata.modificationTime.getTime();
+          });
+          // Process the oldest 1/3.
+          entries.length = Math.ceil(entries.length / 3);
+          var to_delete_index = 0;
+          function delete_next() {
+            if (to_delete_index >= entries.length) {
+              ensure_more_space();
+              return;
+            }
+            var entry = entries[to_delete_index].entry;
+            if (entry.isDirectory) {
+              entry.removeRecursively(function() {
+                to_delete_index += 1;
+                delete_next();
+              }, err);
+            } else {
+              entry.remove(function() {
+                to_delete_index += 1;
+                delete_next();
+              }, err);
+            }
+          }
+          delete_next();
+        }, err);
+      }, err);
+    }
+    ensure_more_space();
+  }
+  function job_directory(requested) {
+    return cache_version + ':' + requested.width + 'x' + requested.height +
+      ':' + requested.extent +
+      (requested.mode === null ? '' : ':b=' + requested.mode) +
+      ':' + encodeURIComponent(requested.canon);
+  }
+  function clone(obj) {
+    if (null === obj || "object" != typeof obj) return obj;
+    var copy = obj.constructor();
+    for (var attr in obj) {
+      if (obj.hasOwnProperty(attr)) { copy[attr] = obj[attr]; }
+    }
+    return copy;
+  }
+  function serializable_frames(frames) {
+    var saveframes = [];
+    for (var j = 0; j < frames.length; ++j) {
+      var c = clone(frames[j]);
+      delete c['canvas'];
+      delete c['ctx'];
+      saveframes.push(c);
+    }
+    return saveframes;
+  }
+  var recent_saves = [];
+  var saved_in_memory = {};
+  var saving_key = null;
+  var saving_key_finished = false;
+  var loading_key = null;
+
+  function canvas_count(frames) {
+    var count = 0;
+    for (var j = 0; j < frames.length; ++j) {
+      if (frames[j].canvas !== null) { count += 1; }
+    }
+    return count;
+  }
+
+  // Limit the number of canvases that can be saved.
+  function trim_recent_saves() {
+    var total_frames = 0;
+    for (var j = 0; j < recent_saves.length; ++j) {
+      total_frames += canvas_count(saved_in_memory[recent_saves[j]].frames);
+    }
+    var discarded = 0;
+    // Reduce the queue to the allowed size.
+    while (!(total_frames <= in_memory_frames)) {
+      total_frames -= canvas_count(saved_in_memory[recent_saves[0]].frames);
+      delete saved_in_memory[recent_saves[0]];
+      recent_saves.shift();
+      discarded += 1;
+    }
+    if (discarded > 0) {
+      trace('discarded ' + discarded + ' in-memory items.  ' +
+            'canvas count: ' + total_frames);
+    }
+  }
+
+  // Put the frames in the in-memory saving stack, and start saving to disk.
+  function save(drawn, frames) {
+    var key = job_directory(drawn);
+    // Count queue size and bump this key to the end.
+    var total_frames = frames.length;
+    for (var j = 0; j < recent_saves.length; ++j) {
+      if (recent_saves[j] == key) {
+        recent_saves.splice(j, 1);
+        break;
+      }
+    }
+    saved_in_memory[key] = {drawn:drawn, frames:frames};
+    recent_saves.push(key);
+    trim_recent_saves();
+    // Start the process of saving to disk as well.
+    savedisk(key, drawn, frames);
+  }
+  function delete_obsolete() {
+    if (complex_dir === null) { return; }
+    function ok() { }
+    var prefix_needed = cache_version + ':';
+    list_directory(complex_dir, { metadata: true }, function(items) {
+      var removed = 0;
+      var last_removed = '';
+      for (var j = 0; j < items.length; ++j) {
+        var item = items[j];
+        if (item.entry.name.lastIndexOf(prefix_needed, 0) != 0) {
+          removed += 1;
+          last_removed = item.entry.name;
+          if (item.entry.isFile) {
+            item.entry.remove(ok, ok);
+          } else if (item.entry.isDirectory) {
+            item.entry.removeRecursively(ok, ok);
+          }
+        }
+      }
+      if (removed > 0) {
+        trace('removing ' + removed + ' obsolete cache entries' +
+              ', e.g., ' + last_removed);
+      }
+    }, ok);  // list directory
+  }
+
+
+  // Save sequence:
+  // 1. freeze state, so that newer state isn't mixed with older bitmaps.
+  // 2. ensure there is enough free space, if possible.
+  // 3. create a fresh temp directory.
+  // 4. write each canvas out as a ###.rgb.
+  // 5. write the state out as a state.json file.
+  // 6. remove the old directory and rename the temp directory.
+  // 7. dequeue this item from the front of the save_queue
+  // and return success or error.
+  function savedisk(key, drawn, frames) {
+    // No filesystem.
+    if (complex_dir === null) { return; }
+    // Don't write over what's currently being saved or loaded: the exception
+    // is a finished state can interrupt an unfinished state save in progress.
+    var saving_a_finished_state = drawn.state.finished;
+    if ((key == saving_key && (!saving_a_finished_state || saving_key_finished))
+        || key == loading_key) {
+      return;
+    }
+    // Interrupt any ongoing save and start a new one.
+    saving_key = key;
+    saving_key_finished = saving_a_finished_state;
+    // Freeze state to save.
+    var state_str = JSON.stringify({
+      drawn: drawn,
+      frames: serializable_frames(frames)
+    });
+    var description = job_description(drawn, frames);
+    if (frames.length > 1) {
+      trace('caching ' + description);
+    }
+    function interrupted() {
+      if (saving_key == key &&
+          saving_key_finished == saving_a_finished_state) { return false; }
+      trace('interrupted, did not cache ' + description);
+      return true;
+    }
+    function done() {
+      if (saving_key == key) { saving_key = null; }
+      trace('cached ' + description);
+    }
+    function err() {
+      if (saving_key == key) { saving_key = null; }
+      trace('could not cache ' + description);
+    }
+    remove_subdirs_until_free(complex_dir, function() {
+      if (interrupted()) return;
+      get_temp_dir(complex_dir, function(tempdir) {
+        if (interrupted()) return;
+        var frame_index = 0;
+        function process_next_frame() {
+          if (interrupted()) return;
+          while (frame_index < frames.length) {
+            if (frames[frame_index].drawn_pixels > 0 &&
+                frames[frame_index].canvas !== null &&
+                frames[frame_index].same_as === null) {
+              var canvas = frames[frame_index].canvas;
+              canvas_to_blob(canvas, function(blob) {
+                write_blob_to_file(tempdir, frame_index+'.rgb', blob,
+                function() {
+                  frame_index += 1;
+                  process_next_frame();
+                }, err);  // write_blob_to_file
+              }, err);  // canvas_to_blob
+              return;
+            } else {
+              frame_index += 1;
+            }
+          }
+          // Step 4.
+          write_string_to_file(tempdir, 'state.json', state_str, function() {
+            // Step 5.
+            move_and_overwrite(tempdir, complex_dir, key, done, err);
+          }, err);
+        }  // process_next_frame
+        process_next_frame();
+      }, err);  // get_empty_dir
+    }, err);  // remove_subdirs_until_free
+  }  // function savedisk
+
+  function job_description(job, frames) {
+    return (job.finished ? 'finished' : 'checkpoint')
+        + ' ' + job.state.opcount + 'ops'
+        + ' ' + job.elapsed + 'ms '
+        + job.width + 'x' + job.height
+        + 'x' + (frames ? frames.length : 1) + ' ' + job.canon;
+  }
+
+  // Load the frames from the in-memory saving stack, or load from disk.
+  function load(requested, outer_done) {
+    var key = job_directory(requested);
+    // stop any ongoing loads
+    if (loading_key == key) { return; }
+    loading_key = null;
+    for (var j = 0; j < recent_saves.length; ++j) {
+      if (recent_saves[j] == key) {
+        recent_saves.splice(j, 1);
+        recent_saves.push(key);
+        var saved = saved_in_memory[key];
+        // Callback is expected to be async, so add a 0ms timer.
+        window.setTimeout(function() {
+          trace('memory loaded ' + job_description(saved.drawn, saved.frames));
+          done(saved);
+        }, 0);
+        return;
+      }
+    }
+    function done(d) {
+      saved_in_memory[key] = d;
+      recent_saves.push(key);
+      trim_recent_saves();
+      outer_done(d);
+    }
+    loaddisk(key, done);
+  }
+
+  // Load sequence.
+  // 1. locate a directory with the appropriate name
+  // 2. read the state out as a state.json file.
+  // 3. read the files in the directory.
+  // 4. render each ###.rgb file into a canvas.
+  // 5. propagte the same_as bits and very we have all bits.
+  // 6. touch the directory as read.
+  // then call done with {drawn, state, buffer} or error.
+  function loaddisk(key, outer_done) {
+    if (initializing) {
+      after_init(function() {
+        loaddisk(key, outer_done);
+      });
+      return;
+    }
+    // No filesystem.
+    if (complex_dir === null) { return; }
+    loading_key = key;
+    function err(e) {
+      if (loading_key == key) loading_key = null;
+    }
+    function done(d) {
+      if (loading_key == key) loading_key = null;
+      trace('loaded ' + job_description(d.drawn, d.frames));
+      outer_done(d);
+    }
+    function interrupted() {
+      if (loading_key == key) { return false; }
+      return true;
+    }
+    // Step 1.
+    complex_dir.getDirectory(key, {}, function(jd) {
+      // Step 2.
+      jd.getFile('state.json', { }, function(state_file) {
+        state_file.file(function(file) {
+          if (interrupted()) { return; }
+          load_blob_as_text(file, function(json) {
+            if (interrupted()) { return; }
+            var saved;
+            try {
+              saved = JSON.parse(json);
+            } catch(e) {
+              err(e);
+            }
+            if (saved.frames.length > 1) {
+              trace('loading ' + job_description(saved.drawn, saved.frames));
+            }
+            // Step 3.
+            list_directory(jd, {pattern: /^\d+\.rgb$/}, function(entries) {
+              if (interrupted()) { return; }
+              var entries_remaining = entries.length;
+              function process_entry(entry_index) {
+                if (interrupted()) { return; }
+                // Step 4.
+                var entry = entries[entry_index].entry;
+                var num = parseInt(entry.name);
+                if (num >= 0 && num < saved.frames.length) {
+                  var canvas = document.createElement('canvas');
+                  render_entry_in_canvas(entry, canvas, function() {
+                    if (interrupted()) { return; }
+                    saved.frames[num].canvas = canvas;
+                    saved.frames[num].ctx = canvas.getContext('2d');
+                    entry_done();
+                  }, err);  // render_blob_in_canvas
+                } else {
+                  entry_done();
+                }
+              }  // process_entry
+              function entry_done() {
+                if (interrupted()) { return; }
+                entries_remaining -= 1;
+                if (entries_remaining > 0) return;
+                // Step 5.
+                var frames = saved.frames;
+                for (var j = 0; j < frames.length; ++j) {
+                  if (!frames[j].canvas) {
+                    if (!frames[j].same_as && frames[j].drawn_pixels > 0) {
+                      err({code:0,message:'missing canvas ' + j});
+                      return;
+                    }
+                    // No reason to have a canvas: everything is cool.
+                    frames[j].canvas = null;
+                    frames[j].ctx = null;
+                  }
+                }
+                // Step 6.
+                touch_dir(jd, (new Date).getTime(), function() {
+                  if (interrupted()) { return; }
+                  done({
+                    drawn: saved.drawn,
+                    frames: saved.frames
+                  });
+                }, err);  // touch_dir
+              }  // entries_done
+              for (var j = 0; j < entries.length; ++j) {
+                if (interrupted()) { return; }
+                process_entry(j);
+              }
+            }, err);  // list_directory
+          }, err);  // load_blob_as_text
+        }, err);  // state_file.file
+      }, err);  // getFile state.json
+    }, err);  // getDirectory
+  }  // function loaddisk
+  return { load:load, save:save };
+}
+</script>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- COMPUTATION SCRIPT    - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<script id="compute">
+
+// This is the parser for complex number formulae.
+function complex_expression(s) {
+  var consts = {i:{r:0,i:1}, pi:{r:Math.PI,i:0}, e:{r:Math.E,i:0}};
+  var vars = {
+    m:'m', n:'n', t:'t', r:'r', s:'s', u: 'u', z:'z', 'z\'': 'zp'};
+  var funcs = {
+    random:0,
+    re:1, im:1, modulus:1, arg:1, recip:1, neg:1, conj:1, disk:1,
+    floor:1, ceil:1, square:1, cube:1, sqrt:1,
+    exp:1, log:1,
+    sin:1, cos:1, tan:1, cot:1, sec:1, csc:1,
+    sinh:1, cosh:1, tanh:1, coth:1, sech:1, csch:1,
+    asin:1, acos:1, atan:1,
+    arcsin:1, arccos:1, arctan: 1, arccot:1, arcsec:1, arccsc: 1,
+    arcsinh:1, arccosh:1, arctanh:1, arccoth:1, arcsech:1, arccsch:1,
+    gamma:1,
+    pow:2, binomial:2,
+    sn:2, cn:2, dn:2,
+    sum:2,
+    iter:3
+  };
+  var syns = {
+    asin: 'arcsin', acos: 'arccos', atan: 'arctan'
+  };
+  var params = [
+    { name: 't',
+      defn: '{r:par,i:0}',
+      caption: (function(t) { return 't = ' + t.toFixed(3) ; })
+    },
+    { name: 'u',
+      defn: '{r:Math.cos(Math.PI*2*par),i:Math.sin(Math.PI*2*par)}',
+      caption: (function(t) { // epislon added to avoid displaying "-0.00".
+        var s = Math.sin(Math.PI*2*t)+3e-16, c = Math.cos(Math.PI*2*t)+3e-16;
+        return 'u = ' + c.toFixed(2) + (s >= 0 ? ' + ' : ' - ')
+                      + Math.abs(s).toFixed(2) + 'i';
+      })
+    },
+    { name: 'n',
+      defn: '{r:Math.floor(par*par*59 + 1.5),i:0}',
+      caption: (function(t) { return 'n = ' + (Math.floor(t*t*59 + 1.5)); })
+    },
+    { name: 's',
+      defn: '{r:Math.sin(Math.PI*2*par),i:0}',
+      caption: (function(t) {
+        return 's = ' + (Math.sin(Math.PI*2*t)+3e-16).toFixed(3);
+      })
+    },
+    { name: 'r',
+      defn: '{r:0.5-Math.cos(Math.PI*2*par)/2,i:0}',
+      caption: (function(t) {
+        return 'r = ' + (.5-Math.cos(Math.PI*2*t)/2+3e-16).toFixed(3);
+      })
+    }
+  ];
+  var loops = { iter:1, sum:1 };
+  var symbols = {}
+  var factorials = [];
+
+  function run() {
+    dictadd(symbols, consts);
+    dictadd(symbols, vars);
+    dictadd(symbols, funcs);
+    init_constants();
+    var state = { tok: tokenize(s), j: 0 }
+    if (state.tok === null) return null;
+    var result = parsesum(state, false);
+    if (result === null || state.j < state.tok.length) return null;
+    var parameters = [];
+    if (result.vars.hasOwnProperty('z\'')) return null;
+    var fntext = '(function(z,par){';
+    if (result.vars.hasOwnProperty('m')) { defns += 'var m = expi(z); ' }
+    for (var j = 0; j < params.length; ++j) {
+      if (result.vars.hasOwnProperty(params[j].name)) {
+        if (params[j].defn) {
+          fntext += 'var ' + params[j].name + '=' + params[j].defn + ';';
+        }
+        parameters.push({
+          name: params[j].name,
+          caption: params[j].caption
+        });
+      }
+    }
+    fntext += 'return ' + result.expr +';})';
+    return { fn: eval(fntext), fntext: fntext, parameters: parameters };
+  }
+
+  function init_constants() {
+    factorials.push(1);
+    for (var j = 0; j < 160; ++j) {
+      factorials.push(factorials[factorials.length - 1] * factorials.length);
+    }
+  }
+  // Evaluate this function, and return a r, j tuple.
+  function random() {
+    while (true) {
+      var result = {r: Math.random() * 2 - 1, i: Math.random() * 2 - 1};
+      if (modulussquared(result) < 1) { return result; }
+    }
+  }
+  function re(z) {
+    return {r: z.r, i: 0};
+  }
+  function im(z) {
+    return {r: z.i, i: 0};
+  }
+  function scale(s, z) {
+    return {r: z.r * s, i: z.i * s};
+  }
+  function modulussquared(z) {
+    return z.r * z.r + z.i * z.i;
+  }
+  function realmodulus(z) {
+    return Math.sqrt(modulussquared(z));
+  }
+  function modulus(z) {
+    if (z.i == 0) { return { r:Math.abs(z.r), i:0 }; }
+    return {r: realmodulus(z), i: 0};
+  }
+  function realarg(z) {
+    return Math.atan2(z.i, z.r);
+  }
+  function arg(z) {
+    return {r: realarg(z), i: 0};
+  }
+
+  function add(y, z) {
+    return {r: y.r + z.r, i: y.i + z.i};
+  }
+  function sub(y, z) {
+    return {r: y.r - z.r, i: y.i - z.i};
+  }
+  function mult(y, z) {
+    return {r: y.r * z.r - y.i * z.i, i: y.r * z.i + y.i * z.r};
+  }
+  function div(y, z) {
+    var m2 = modulussquared(z);
+    return {r: (y.r * z.r + y.i * z.i) / m2, i: (y.i * z.r - y.r * z.i) / m2};
+  }
+  function recip(z) {
+    var m2 = modulussquared(z);
+    return {r: z.r / m2, i: -z.i / m2};
+  }
+  function neg(z) {
+    return {r: -z.r, i: -z.i};
+  }
+  function conj(z) {
+    return {r: z.r, i: -z.i};
+  }
+  function disk(z) {
+    if (realmodulus(z) > 1) { return {r:0,i:0}; }
+    return {r:1,i:0};
+  }
+  function exp(z) {
+    var er = Math.exp(z.r);
+    return {r: er * Math.cos(z.i), i: er * Math.sin(z.i)};
+  }
+  function expi(z) {
+    var er = Math.exp(-z.i);
+    return {r: er * Math.cos(z.r), i: er * Math.sin(z.r)};
+  }
+  function log(z) {
+    return {r: Math.log(realmodulus(z)), i: realarg(z)};
+  }
+  function realsinh(x) {
+    return (-Math.exp(-x) + Math.exp(x)) / 2;
+  }
+  function realcosh(x) {
+    return (Math.exp(-x) + Math.exp(x)) / 2;
+  }
+  function realtanh(x) {
+    return (1 - Math.exp(-2*x)) / (1 + Math.exp(-2*x));
+  }
+  function sin(z) {
+    var er = Math.exp(z.i);
+    var enr = 1/er;
+    return {r: (er + enr) * 0.5 * Math.sin(z.r),
+            i: (er - enr) * 0.5 * Math.cos(z.r)};
+  }
+  function cos(z) {
+    var er = Math.exp(z.i);
+    var enr = 1/er;
+    return {r: (enr + er) * 0.5 * Math.cos(z.r),
+            i: (enr - er) * 0.5 * Math.sin(z.r)};
+  }
+  function sec(z) {
+    return recip(cos(z));
+  }
+  function csc(z) {
+    return recip(sin(z));
+  }
+  function tan(z) {
+    var er = Math.exp(z.i),
+        enr = 1/er,
+        es = er + enr,
+        ed = er - enr,
+        s = Math.sin(z.r),
+        c = Math.cos(z.r);
+    return div({r: es * s, i: ed * c}, {r: es * c, i: -ed * s });
+  }
+  function cot(z) {
+    var er = Math.exp(z.i),
+        enr = 1/er,
+        es = er + enr,
+        ed = er - enr,
+        s = Math.sin(z.r),
+        c = Math.cos(z.r);
+    return div({r: es * c, i: -ed * s }, {r: es * s, i: ed * c});
+  }
+  function sinh(z) {
+    return negitimes(sin(itimes(z)));
+  }
+  function cosh(z) {
+    return cos(itimes(z));
+  }
+  function tanh(z) {
+    return negitimes(tan(itimes(z)));
+  }
+  function coth(z) {
+    return itimes(cot(itimes(z)));
+  }
+  function sech(z) {
+    return sec(itimes(z));
+  }
+  function csch(z) {
+    return itimes(csc(itimes(z)));
+  }
+  function intpow(y, c) {
+    if (c == 1) return y;
+    if (c % 2 == 0) return square(intpow(y, c / 2));
+    if (c % 3 == 0) return cube(intpow(y, c / 3));
+    if (c % 5 == 0) return p5(intpow(y, c / 5));
+    return mult(y, intpow(y, c - 1));
+  }
+  function realpow(y, r) {
+    if (r == Math.floor(r)) {
+      if (r > 0 && r <= 64) { return intpow(y, r); }
+      if (r < 0 && r >= -64) { return recip(intpow(y, -r)); }
+      if (r == 0) { return {r:1,i:0}; }
+    }
+    var arg = realarg(y) * r,
+        modulus = Math.pow(realmodulus(y), r);
+    return {r: modulus * Math.cos(arg), i: modulus * Math.sin(arg)};
+  }
+  function powreal(r, z) {
+    return exp(scale(Math.log(r), z));
+  }
+  function pow(y, z) {
+    if (z.i == 0) { return realpow(y, z.r); }
+    if (y.i == 0) { return powreal(y.r, z); }
+    return exp(mult(log(y), z));
+  }
+  function floor(z) {
+    return {r: Math.floor(z.r), i: Math.floor(z.i)};
+  }
+  function ceil(z) {
+    return {r: Math.ceil(z.r), i: Math.ceil(z.i)};
+  }
+  function square(z) {
+    var t = z.r * z.i;
+    return {r: z.r * z.r - z.i * z.i, i: t + t};
+  }
+  function cube(z) {
+    var r2 = z.r * z.r,
+        i2 = z.i * z.i;
+    return {r: z.r * (r2 - 3 * i2), i: z.i * (3 * r2 - i2) }
+  }
+  function p5(z) {
+    var r2 = z.r * z.r,
+        i2 = z.i * z.i,
+        p2 = r2 * i2,
+        t2 = p2 + p2,
+        r4 = r2 * r2,
+        i4 = i2 * i2;
+    return {r: z.r * (r4 + 5 * (i4 - t2)), i: z.i * (i4 + 5 * (r4 - t2))};
+  }
+  function sqrt(z) {
+    var a = Math.sqrt((Math.abs(z.r) + realmodulus(z)) / 2),
+        b = z.i / a / 2;
+    if (z.r < 0) {
+      if (z.i < 0) {
+        return {r:-b,i:-a};
+      } else {
+        return {r:b,i:a};
+      }
+    }
+    return {r:a,i:b};
+  }
+  function itimes(z) {
+    return {r: -z.i, i: z.r};
+  }
+  function negitimes(z) {
+    return {r: z.i, i: -z.r};
+  }
+  function oneminus(z) {
+    return {r: 1 - z.r, i: -z.i};
+  }
+  function oneplus(z) {
+    return {r: 1 + z.r, i: z.i};
+  }
+  function minusone(z) {
+    return {r: z.r - 1, i: z.i};
+  }
+  function arcsin(z) {
+    return negitimes(log(add(itimes(z), sqrt(oneminus(square(z))))));
+  }
+  function arccos(z) {
+    return negitimes(log(add(z, itimes(sqrt(oneminus(square(z)))))));
+  }
+  function arctan(z) {
+    return scale(0.5, itimes(
+        sub(log(oneminus(itimes(z))), log(oneplus(itimes(z))))));
+  }
+  function arccot(z) {
+    return arctan(recip(z));
+  }
+  function arcsec(z) {
+    return arccos(recip(z));
+  }
+  function arccsc(z) {
+    return arcsin(recip(z));
+  }
+  function arcsinh(z) {
+    var opsz = oneplus(square(z));
+    return log(add(z, scale(Math.sqrt(realmodulus(opsz)),
+                            exp({r: 0, i: realarg(opsz) / 2}))));
+  }
+  function arccosh(z) {
+    var szmo = minusone(square(z));
+    return log(add(z, scale(Math.sqrt(realmodulus(szmo)),
+                            exp({r: 0, i: realarg(szmo) / 2}))));
+  }
+  function arctanh(z) {
+    return scale(0.5, sub(log(oneplus(z)), log(oneminus(z))));
+  }
+  function arccoth(z) {
+    return scale(0.5, sub(log(oneplus(z)), log(minusone(z))));
+  }
+  function arcsech(z) {
+    return negitimes(arcsec(z));
+  }
+  function arccsch(z) {
+    return negitimes(arccsc(negitimes(z)));
+  }
+  function binomial(n, c) {
+    if (n.i == 0 && n.r == Math.floor(n.r) && n.r >= 0 &&
+        c.i == 0 && c.r == Math.floor(c.r) && c.r >= 0 && c.r <= n.r) {
+      // If n is small enough for n! to be fully precise, just use factorial.
+      if (n.r < 21) {
+        return {r: factorials[n.r] /
+                   factorials[c.r] / factorials[n.r - c.r], i: 0};
+      }
+      // Otherwise, loop to preserve precision.
+      var k = Math.min(c.r, n.r - c.r),
+          m = n.r,
+          result = 1, j;
+      for (j = 1; j <= k; ++j) {
+        result = result * (m - (k - j)) / j;
+      }
+      return {r: result, i: 0};
+    }
+    return div(gamma(oneplus(n)),
+               mult(gamma(oneplus(c)), gamma(oneplus(sub(n, c)))));
+  }
+  function factorial(z) {
+    if (z.i == 0 && z.r == Math.floor(z.r) && z.r >= 0) {
+      if (z.r < factorials.length) {
+        return {r: factorials[z.r], i: 0};
+      }
+    }
+    return gamma(oneplus(z));
+  }
+  function gamma(z) {
+    var sqrt2pi = Math.sqrt(2 * Math.PI),
+        gamma_coeff = [
+          0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+          771.32342877765313, -176.61502916214059, 12.507343278686905,
+          -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+        ],
+        gamma_g = 7;
+    if (z.r < 0.5) {
+      return scale(Math.PI, recip(mult(
+        sin(scale(Math.PI, z)), gamma(oneminus(z)))));
+    }
+    var zmo = minusone(z),
+        x = {r: gamma_coeff[0], i: 0},
+        i, t;
+    for (i = 1; i < gamma_g + 2; ++i) {
+      x = add(x, scale(gamma_coeff[i], recip({r:zmo.r+i, i:zmo.i})));
+    }
+    t = {r:zmo.r + gamma_g + 0.5, i:zmo.i};
+    return scale(sqrt2pi, mult(mult(
+        pow(t, {r:zmo.r+0.5, i:zmo.i}), exp(neg(t))), x));
+  }
+
+  function sn(z, k) {
+    if (typeof(k) == "object") { k = k.r; }
+    var kp = Math.sqrt(1 - k*k),
+        ju = realellipj(z.r, k),
+        jv = realellipj(z.i, kp),
+        denom = (1 - ju.dn*ju.dn * jv.sn*jv.sn);
+    return {
+      r: (ju.sn * jv.dn) / denom,
+      i: (ju.cn * ju.dn * jv.sn * jv.cn) / denom
+    };
+  }
+  function cn(z, k) {
+    if (typeof(k) == "object") { k = k.r; }
+    var kp = Math.sqrt(1 - k*k),
+        ju = realellipj(z.r, k),
+        jv = realellipj(z.i, kp),
+        denom = (1 - ju.dn*ju.dn * jv.sn*jv.sn);
+    return {
+      r: (ju.cn * jv.cn) / denom,
+      i: -(ju.sn * ju.dn * jv.sn * jv.dn) / denom
+    };
+  }
+  function dn(z, k) {
+    if (typeof(k) == "object") { k = k.r; }
+    var kp = Math.sqrt(1 - k*k),
+        ju = realellipj(z.r, k),
+        jv = realellipj(z.i, kp),
+        denom = (1 - ju.dn*ju.dn * jv.sn*jv.sn);
+    return {
+      r: (ju.dn * jv.cn * jv.dn) / denom,
+      i: -(k * k * ju.sn * ju.cn * jv.sn) / denom
+    };
+  }
+
+  function sum(z, fn, iters) {
+    var r = 0, i = 0, end = Math.floor(iters.r), n, result;
+    for (n = 0; n < end; ++n) {
+      result = fn(z, {r:n, i:0});
+      r += result.r;
+      i += result.i;
+    }
+    return {r:r,i:i};
+  }
+
+  function iter(z, fn, start, iters) {
+    var result = start, end = Math.floor(iters.r), n;
+    for (n = 0; n < end; ++n) {
+      result = fn(z, result, {r:n, i:0});
+    }
+    return result;
+  }
+
+  function realellipj(u, m) {
+    /* Jacobi elliptical functions, real form, expressed in Javascript. */
+    /* adapted from C Cephes library, ellipj.c, by Stephen L. Moshier */
+    /* http://lists.debian.org/debian-legal/2004/12/msg00295.html */
+    var ai, aj, b, phi, twon, a=[], c=[], i, epsilon = 2.22045e-16;
+    if(m < 0.0 || m > 1.0) {
+      return {sn: NaN, cn: NaN, ph: NaN, dn: NaN};
+    }
+    if (m < 1.0e-9) {
+      t = Math.sin(u);
+      b = Math.cos(u);
+      ai = 0.25 * m * (u - t*b);
+      return {sn: t - ai*b, cn: b + ai*t, ph: u - ai, dn: 1.0 - 0.5*m*t*t};
+    }
+    if (m >= 0.9999999999) {
+      ai = 0.25 * (1.0 - m);
+      b = realcosh(u);
+      t = realtanh(u);
+      phi = 1.0/b;
+      aj = ai * t * phi;
+      twon = b * realsinh(u);
+      return {
+        sn: t + ai * (twon - u)/(b*b),
+        ph: 2.0*Math.atan(Math.exp(u)) - Math.PI/2 + ai*(twon - u)/b,
+        cn: phi - aj * (twon - u),
+        dn: phi + aj * (twon + u)
+      }
+    }
+    a[0] = 1.0;
+    b = Math.sqrt(1.0 - m);
+    c[0] = Math.sqrt(m);
+    twon = 1.0;
+    i = 0;
+    while (Math.abs(c[i]/a[i]) > epsilon && i < 8) {
+      ai = a[i];
+      ++i;
+      c[i] = (ai - b) / 2.0;
+      t = Math.sqrt(ai * b);
+      a[i] = (ai + b) / 2.0;
+      b = t;
+      twon *= 2.0;
+    }
+    phi = twon * a[i] * u;
+    do {
+      t = c[i] * Math.sin(phi) / a[i];
+      b = phi;
+      phi = (Math.asin(t) + phi)/2.0;
+    } while (--i);
+    t = Math.cos(phi);
+    return {sn: Math.sin(phi), cn: t, dn: t/Math.cos(phi-b), ph: phi};
+  }
+
+  function splitwords(tok) {
+    var s = tok.text;
+    var result = [];
+    for (var begin = 0; begin < s.length;) {
+      var found = false;
+      for (var end = s.length; end > begin; --end) {
+        var sub = s.substring(begin, end);
+        if (symbols.hasOwnProperty(sub)) {
+          result.push({spaced: begin == 0 && tok.spaced, text: sub});
+          begin = end;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        result.push({
+          spaced: begin == 0 && tok.spaced,
+          text: s.substring(begin)
+        });
+        break;
+      }
+    }
+    return result;
+  }
+
+  function tokenize(s) {
+    var rexp = /(\s*)(?:((?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|\*\*|[-+()^|,*\/!]|[a-zA-Z_]+'?)|(\S.*))/g;
+    var result = [];
+    var match;
+    while ((match = rexp.exec(s)) !== null) {
+      if (match[3]) { return null; }
+      if (match[2]) {
+        var tok = { spaced: match[1] && match[1].length > 0, text: match[2] };
+        if (/^\w/.exec(tok.text)) {
+          result.push.apply(result, splitwords(tok));
+        } else {
+          result.push(tok);
+        }
+      }
+    }
+    return result;
+  }
+
+  function parsesum(state, inabs) {
+    var root = null;
+    var op = null;
+    while (true) {
+      var term = parseproduct(state, inabs);
+      if (term === null) { return null; }
+      if (root === null) { root = term; }
+      else { root = compose(op, [root, term]); }
+      if (state.j < state.tok.length) {
+        var next = state.tok[state.j];
+        if (next.text == '+' || next.text == '-') {
+          op = (next.text == '+' ? 'add' : 'sub');
+          state.j += 1;
+          continue;
+        }
+      }
+      break;
+    }
+    return root;
+  }
+
+  function parseproduct(state, inabs) {
+    var root = null;
+    var auto = -1;
+    var op = null;
+    while (true) {
+      var term = parseunary(state, auto >= 0, inabs);
+      if (term === null) { return (state.j == auto) ? root : null; }
+      if (root === null) { root = term; }
+      else { root = compose(op, [root, term]); }
+      if (state.j < state.tok.length) {
+        var next = state.tok[state.j];
+        if (next.text == '*' || next.text == '/') {
+          op = (next.text == '*' ? 'mult' : 'div');
+          state.j += 1;
+          auto = -1;
+          continue;
+        } else if (!inabs || next.text != '|') {
+          op = 'mult';
+          auto = state.j;
+          continue;
+        }
+      }
+      break;
+    }
+    return root;
+  }
+
+  function parseunary(state, noneg, inabs) {
+    if (state.j < state.tok.length) {
+      var next = state.tok[state.j];
+      if (!noneg && next.text == '-') {
+        state.j += 1;
+        var term = parseunary(state, inabs);
+        if (term === null) return null;
+        return compose('neg', [term]);
+      }
+    }
+    return parsetightproduct(state, inabs);
+  }
+
+  function parsetightproduct(state, inabs) {
+    var root = null;
+    var auto = -1;
+    var op;
+    while (true) {
+      var term = parsepower(state, inabs);
+      if (term === null) { return (state.j == auto) ? root : null; }
+      if (root === null) { root = term; }
+      else { root = compose('mult', [root, term]); }
+      if (state.j < state.tok.length) {
+        var next = state.tok[state.j];
+        if (/^[\w\d\.]/.exec(next.text) && !next.spaced) {
+          auto = state.j
+          continue;
+        }
+      }
+      break;
+    }
+    return root;
+  }
+
+  function parsepower(state, inabs) {
+    var term = parsesuffixed(state, inabs);
+    if (term === null) return null;
+    if (state.j < state.tok.length) {
+      var next = state.tok[state.j];
+      if (next.text == '^' || next.text == '**') {
+        state.j += 1;
+        var expterm = parseunary(state, inabs);
+        if (expterm === null) return null;
+        return compose('pow', [term, expterm]);
+      }
+    }
+    return term;
+  }
+
+  function parsesuffixed(state, inabs) {
+    var term = parseunit(state);
+    if (term === null) return null;
+    var found = true;
+    while (found) {
+      found = false;
+      if (state.j < state.tok.length &&
+          state.tok[state.j].text == '*') {
+        var ismult = true;
+        if (state.j + 1 >= state.tok.length) {
+          ismult = false;
+        } else {
+          var peek = state.tok[state.j + 1];
+          if (peek.text == ')' || peek.text == '*' ||
+              peek.text == '/' || peek.text == '+' ||
+              peek.text == '-' || peek.text == '^' ||
+              (inabs && peek.text == '|')) {
+            ismult = false;
+          }
+        }
+        if (!ismult) {
+          state.j += 1;
+          term = compose('conj', [term]);
+          found = true;
+        }
+      }
+      if (state.j < state.tok.length &&
+          state.tok[state.j].text == '!') {
+        state.j += 1;
+        term = compose('factorial', [term]);
+        found = true;
+      }
+    }
+    return term;
+  }
+
+  function parseunit(state) {
+    if (state.j >= state.tok.length) { return null; }
+    var next = state.tok[state.j];
+    if (/^\d|\./.exec(next.text)) {
+      state.j += 1;
+      return composereal(parseFloat(next.text));
+    }
+    var result;
+    if (/^\w/.exec(next.text)) {
+      state.j += 1;
+      if (state.j < state.tok.length &&
+          state.tok[state.j].text == '(' &&
+          funcs.hasOwnProperty(next.text)) {
+        var paramcount = funcs[next.text];
+        var params = [];
+        state.j += 1;
+        if (paramcount == 0) {
+          if (state.j >= state.tok.length || state.tok[state.j].text != ')') {
+            return null;
+          }
+          state.j += 1;
+        }
+        while (paramcount > 0) {
+          var param = parsesum(state, false);
+          if (param == null) { return null; }
+          params.push(param);
+          paramcount -= 1;
+          if (state.j >= state.tok.length ||
+              state.tok[state.j].text != (paramcount ? ',' : ')')) {
+            // implicit last param of 0,0,0...,'n' for loops
+            if (loops.hasOwnProperty(next.text)
+                && state.j < state.tok.length
+                && state.tok[state.j].text == ')') {
+              while (paramcount > 1) {
+                params.push(composereal(0));
+                paramcount -= 1;
+              }
+              params.push({expr:'n',vars:{'n':'n'},val:null});
+              paramcount -= 1;
+            } else {
+              return null;
+            }
+          }
+          state.j += 1;
+        }
+        if (loops.hasOwnProperty(next.text)) {
+          var vs = {};
+          dictadd(vs, params[0].vars);
+          var funcdecl = 'function(z,n)';
+          delete vs['n'];
+          if (next.text == 'iter') {
+            funcdecl = 'function(z,zp,n)';
+            delete vs['z\''];
+          }
+          var args = ['z', funcdecl + '{return ' + params[0].expr + ';}']
+          for (var j= 1; j < params.length; ++j) {
+            dictadd(vs, params[j].vars);
+            args.push(params[j].expr);
+          }
+          return {
+            expr: next.text + '(' + args.join(',') + ')',
+            vars: vs,
+            val: null
+          };
+        }
+        var fname = next.text;
+        if (syns.hasOwnProperty(fname)) { fname = syns[fname]; }
+        return compose(fname, params);
+      } else if (vars.hasOwnProperty(next.text)) {
+        var vs = {};
+        vs[next.text] = vars[next.text];
+        return {
+          expr: vars[next.text],
+          vars: vs,
+          val: null
+        };
+      } else if (consts.hasOwnProperty(next.text)) {
+        var vl = consts[next.text];
+        return {
+          expr: '{r:' + vl.r + ',i:' + vl.i + '}',
+          vars: {},
+          val: vl
+        };
+      }
+    }
+    if (next.text == '(' || next.text == '|') {
+      state.j += 1;
+      result = parsesum(state, next.text == '|');
+      if (state.j >= state.tok.length ||
+          state.tok[state.j].text != (next.text == '|' ? '|' : ')')) {
+        return null;
+      }
+      state.j += 1;
+      if (next.text == '|') {
+        return compose('modulus', [result]);
+      }
+      return result;
+    }
+    return null;
+  }
+
+  function composereal(r) {
+    return {
+      expr: '{r:' + r  + ',i:0}',
+      vars: {},
+      val: {r:r,i:0}
+    };
+  }
+
+  function compose(fname, args) {
+    var vs = {};
+    var ae = [];
+    var av = [];
+    var vl = null;
+    var valcount = 0;
+    var fn = eval(fname);
+    for (var j = 0; j < args.length; ++j) {
+      dictadd(vs, args[j].vars);
+      ae.push(args[j].expr);
+      av.push(args[j].val);
+      if (args[j].val !== null) ++valcount;
+    }
+    // Fold constants
+    if (dictsize(vs) == 0 && valcount == args.length && args.length > 0) {
+      vl = fn.apply(null, av);
+      return {
+        expr: '{r:' + vl.r + ',i:' + vl.i + '}',
+        vars: vs,
+        val: vl
+      }
+    }
+    // Optimize real multiplication and division
+    if ((fn === mult || fn === div) && isreal(1, av[1])) {
+      return args[0];
+    }
+    if (fn === mult && av[0] !== null && av[0].i == 0) {
+      if (isreal(1, av[0])) { return args[1]; }
+      return {
+        expr: 'scale(' + av[0].r + ',' + ae[1] + ')',
+        vars: vs,
+        val: null
+      }
+    }
+    if (fn === div && av[1] !== null && av[1].i == 0 && av[1].r != 0) {
+      if (isreal(1, av[1])) { return args[1]; }
+      return {
+        expr: 'scale(' + (1/av[1].r) + ',' + ae[0] + ')',
+        vars: vs,
+        val: null
+      }
+    }
+    if (fn === div && av[0] !== null && av[0].i == 0) {
+      var r = compose('recip', [args[1]]);
+      if (isreal(1, av[0])) { return r; }
+      return {
+        expr: 'scale(' + av[0].r + ',' + r.expr + ')',
+        vars: vs,
+        val: null
+      }
+    }
+    // Optimize integral powers and natural exponentiation.
+    if (fn === pow) {
+      if (isreal(-1, av[1])) { return compose('recip', [args[0]]); }
+      if (isreal(0, av[1])) { return composereal(1); }
+      if (isreal(0.5, av[1])) { return compose('sqrt', [args[0]]); }
+      if (isreal(1, av[1])) { return args[0]; }
+      if (isreal(2, av[1])) { return compose('square', [args[0]]); }
+      if (isreal(3, av[1])) { return compose('cube', [args[0]]); }
+      if (isreal(4, av[1])) {
+        return compose('square', [compose('square', [args[0]])]);
+      }
+      if (isreal(5, av[1])) { return compose('p5', [args[0]]); }
+      if (isreal(6, av[1])) {
+        return compose('square', [compose('cube', [args[0]])]);
+      }
+      if (isreal(Math.E, av[0])) {
+        return compose('exp', [args[1]]);
+      }
+    }
+    // Apply the function at runtime.
+    return {
+      expr: fname + '(' + ae.join(',') + ')',
+      vars: vs,
+      val: null
+    }
+  }
+  function isreal(r, c) {
+    return c !== null && c.i == 0 && c.r == r;
+  }
+  function dictsize(dict) {
+    var size = 0, key;
+    for (key in dict) if (dict.hasOwnProperty(key)) ++size;
+    return size;
+  }
+  function dictadd(d1, d2) {
+    for (key in d2) if (d2.hasOwnProperty(key)) d1[key] = d2[key];
+  }
+  return run();
+}  // end of complex_expression
+
+</script>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- MAIN                  - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<script>
+// For debugging output on the main thread.
+function trace(msg) {
+  if (typeof console !== 'undefined' && console.log) {
+    if (typeof msg == 'string' || !window.JSON) {
+      console.log(msg);
+    } else {
+      console.log(JSON.stringify(msg));
+    }
+  }
+}
+
+// Once all the code is loaded, start the UI.
+init();
+</script>
+</html>

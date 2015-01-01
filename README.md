@@ -12,6 +12,8 @@ found by moving the mouse within the page.
 
 https://rawgit.com/davidbau/conformal/master/conformal.html
 
+Written at home in Lincoln MA during Winter Storm Nemo in 2013.
+http://en.wikipedia.org/wiki/February_2013_nor%27easter
 
 LICENSE (MIT)
 -------------

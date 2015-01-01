@@ -8,7 +8,10 @@ Author: David Bau<br>
 Date: 2013 Feb 11
 
 Just view the web page in a modern browser; documentation can be
-found within the page.
+found by moving the mouse within the page.
+
+https://rawgit.com/davidbau/conformal/master/conformal.html
+
 
 LICENSE (MIT)
 -------------

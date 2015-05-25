@@ -10,7 +10,7 @@ Date: 2013 Feb 11
 Just view the web page in a modern browser; documentation can be
 found by moving the mouse within the page.
 
-https://rawgit.com/davidbau/conformal/master/index.html
+https://cdn.rawgit.com/davidbau/conformal/166c418/index.html
 
 Written at home in Lincoln MA during Winter Storm Nemo in 2013.
 http://en.wikipedia.org/wiki/February_2013_nor%27easter

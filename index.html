@@ -1738,7 +1738,10 @@ function draw_conformal_map(
     } else if (dist2 <= 0.00390625) {
       return light ? [0,0,0] : [0xff,0xff,0xff];  // ring at 0
     } else if (dist2 >= 256) {
-      if ((r >= 0) != (j >= 0)) { return [32,32,32]; }
+      if ((r >= 0) != (j >= 0)) {
+        light = 1 - Math.floor(Math.log2(Math.sqrt(dist2))) % 2;
+        return light ? [32,32,32] : [0,0,0];
+      }
       ring = 1;  // ring at infinity
     } else if (!light) {
       return [0,0,0];
